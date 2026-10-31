@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>找回密码 · 吃啥饭</title>
+
+    <!-- 设计系统：令牌、排版与通用组件 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <!-- 登录 / 注册 / 找回密码专属 -->
+    <link rel="stylesheet" th:href="@{/css/auth.css}">
+</head>
+<body class="auth-body">
+
+<!-- question 为 null 表示停在第一步；查出密保问题后进入第二步 -->
+<div class="auth-card">
+    <div class="auth-head">
+        <span class="auth-mark">吃啥饭 · Password Reset</span>
+        <h1 th:text="${question == null ? '找回密码' : '回答密保问题'}">找回密码</h1>
+        <p th:text="${question == null
+                     ? '输入注册时的用户名，验证密保问题后即可重设密码'
+                     : '答对密保问题，就能给这个账号设置新密码'}">
+            输入注册时的用户名，验证密保问题后即可重设密码
+        </p>
+    </div>
+
+    <div class="error-msg" th:if="${error}">
+        <span th:text="${error}">密保答案不正确</span>
+    </div>
+
+    <!-- ============ 第一步：输入用户名 ============ -->
+    <form th:if="${question == null}" action="/forgot" method="post" class="auth-form">
+        <div class="field">
+            <label>用户名</label>
+            <input type="text" name="username" placeholder="请输入注册时的用户名" required autocomplete="username"
+                   th:value="${param.username}">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">下一步</button>
+    </form>
+
+    <!-- ============ 第二步：密保答案 + 新密码 ============ -->
+    <form th:if="${question != null}" action="/forgot/reset" method="post" class="auth-form">
+        <input type="hidden" name="username" th:value="${username}">
+
+        <div class="question-box">
+            <span class="q-label">密保问题</span>
+            <p th:text="${question}">我的第一只宠物叫什么？</p>
+        </div>
+
+        <div class="field">
+            <label>密保答案</label>
+            <input type="text" name="answer" placeholder="答案不区分大小写" required autocomplete="off">
+        </div>
+
+        <div class="field">
+            <label>新密码</label>
+            <input type="password" name="newPassword" placeholder="至少 6 位" required minlength="6"
+                   autocomplete="new-password">
+        </div>
+
+        <div class="field">
+            <label>确认新密码</label>
+            <input type="password" name="confirmPassword" placeholder="再输一次新密码" required minlength="6"
+                   autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">重置密码</button>
+    </form>
+
+    <p class="auth-switch">
+        <a href="/login">返回登录</a>
+        <span class="sep">·</span>
+        还没有账号？<a href="/register">立即注册</a>
+    </p>
+</div>
+
+</body>
+</html>

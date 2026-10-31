@@ -1,0 +1,480 @@
+@charset "UTF-8";
+
+/* ==========================================================================
+   吃啥饭 · 基础层
+   设计令牌 / 排版 / 通用组件（按钮、表单、卡片、导航、空状态）
+   ========================================================================== */
+
+:root {
+    /* 色彩：暖白纸感、墨色文字、砖红点缀，只用三色，克制即高级 */
+    --paper:       #F7F4EF;
+    --surface:     #FFFFFF;
+    --ink:         #17130F;
+    --ink-soft:    #3D3630;
+    --muted:       #8A8078;
+    --line:        #E6DFD5;
+    --line-soft:   #F1EBE2;
+    --accent:      #B0401C;
+    --accent-deep: #8C2F12;
+    --accent-wash: #FAF0EA;
+    --gold:        #C08A2E;
+    --danger:      #A32B25;
+    --danger-wash: #FBF1EF;
+    --success:     #3F6B4A;
+    --success-wash:#F0F5F1;
+
+    /* 字体：标题用衬线体，正文用无衬线体，形成编辑感的对比 */
+    --font-sans: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    --font-serif: "Songti SC", "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif;
+
+    /* 形状与层次 */
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --shadow-1: 0 1px 2px rgba(23, 19, 15, 0.04);
+    --shadow-2: 0 18px 40px -22px rgba(23, 19, 15, 0.35);
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ---------- 重置与排版 ---------- */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    background-color: var(--paper);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+}
+
+p { margin: 0; }
+
+img { display: block; max-width: 100%; }
+
+a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s var(--ease);
+}
+
+a:hover { color: var(--accent); }
+
+::selection {
+    background: var(--accent);
+    color: #fff;
+}
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* ---------- 布局骨架 ---------- */
+
+.shell {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.wrap {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 24px 64px;
+}
+
+/* ---------- 顶部导航 ---------- */
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(247, 244, 239, 0.9);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(10px) saturate(120%);
+}
+
+.topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 1120px;
+    min-height: 62px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-serif);
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+}
+
+.brand::before {
+    content: "";
+    width: 5px;
+    height: 17px;
+    background: var(--accent);
+    border-radius: 1px;
+}
+
+.brand:hover { color: var(--ink); }
+
+.back {
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+.back:hover { color: var(--accent); }
+
+.topbar-title {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    color: var(--ink);
+}
+
+.user-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--ink-soft);
+}
+
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(176, 64, 28, 0.2);
+    border-radius: 50%;
+    background: var(--accent-wash);
+    color: var(--accent-deep);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* ---------- 按钮 ---------- */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease),
+                color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: var(--accent-deep);
+    border-color: var(--accent-deep);
+    color: #fff;
+    box-shadow: var(--shadow-2);
+}
+
+.btn-ghost {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--ink-soft);
+}
+
+.btn-ghost:hover {
+    background: #FCFAF7;
+    border-color: #D8CEC1;
+    color: var(--ink);
+}
+
+.btn-danger {
+    background: var(--danger-wash);
+    border-color: #EFD9D4;
+    color: var(--danger);
+}
+
+.btn-danger:hover {
+    background: #F7E2DE;
+    color: var(--danger);
+}
+
+.btn-sm {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+}
+
+.btn-block {
+    width: 100%;
+    height: 46px;
+    font-size: 15px;
+}
+
+/* ---------- 表单控件 ---------- */
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 11px 14px;
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+input::placeholder,
+textarea::placeholder { color: #B4ABA2; }
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(176, 64, 28, 0.1);
+}
+
+select {
+    padding-right: 34px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%238A8078' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 13px center;
+    cursor: pointer;
+    appearance: none;
+}
+
+textarea {
+    min-height: 96px;
+    line-height: 1.65;
+    resize: vertical;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* :not(.file-box)：避免把上传框也当成普通标签文字 */
+.field > label:not(.file-box) {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+}
+
+.file-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    border: 1px dashed var(--line);
+    border-radius: var(--r-sm);
+    background: #FCFAF7;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), color 0.2s var(--ease), background-color 0.2s var(--ease);
+}
+
+.file-box:hover {
+    border-color: var(--accent);
+    background: var(--accent-wash);
+    color: var(--accent);
+}
+
+.file-box input[type="file"] { display: none; }
+
+.preview {
+    display: none;
+    max-width: 200px;
+    margin-top: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+}
+
+/* ---------- 卡片与区块 ---------- */
+
+.card {
+    padding: 28px;
+    margin-bottom: 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-1);
+}
+
+.card-title {
+    margin-bottom: 20px;
+    font-size: 16px;
+    letter-spacing: 0.02em;
+}
+
+.block-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.block-head h3 { font-size: 17px; }
+
+.block-head .count {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+/* ---------- 提示条 ---------- */
+
+.notice {
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    border-left: 2px solid var(--line);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    background: var(--paper);
+    font-size: 14px;
+}
+
+.notice.ok {
+    border-left-color: var(--success);
+    background: var(--success-wash);
+    color: #33553C;
+}
+
+.notice.err,
+.notice.error {
+    border-left-color: var(--danger);
+    background: var(--danger-wash);
+    color: var(--danger);
+}
+
+.login-tip {
+    padding: 16px 18px;
+    border: 1px dashed var(--line);
+    border-radius: var(--r-sm);
+    background: #FCFAF7;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.login-tip a {
+    color: var(--accent);
+    border-bottom: 1px solid rgba(176, 64, 28, 0.35);
+}
+
+/* ---------- 空状态 ---------- */
+
+.empty {
+    padding: 54px 24px;
+    border: 1px dashed var(--line);
+    border-radius: var(--r-md);
+    background: rgba(255, 255, 255, 0.55);
+    text-align: center;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.empty .icon {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 26px;
+    opacity: 0.6;
+    filter: grayscale(100%);
+}
+
+.empty-wide { grid-column: 1 / -1; }
+
+/* ---------- 页脚 ---------- */
+
+.footer {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 26px 24px 48px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    text-align: center;
+}
+
+.footer::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 1px;
+    margin: 0 auto 20px;
+    background: var(--line);
+}
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 640px) {
+    .shell,
+    .wrap { padding-left: 18px; padding-right: 18px; }
+
+    .topbar-inner {
+        min-height: 56px;
+        padding: 0 18px;
+    }
+
+    .user-area { gap: 8px; font-size: 13px; }
+    .user-area > span { display: none; }
+
+    .card { padding: 20px; }
+
+    .footer { padding: 20px 18px 40px; }
+}

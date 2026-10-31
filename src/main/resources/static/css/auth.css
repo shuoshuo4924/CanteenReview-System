@@ -1,0 +1,186 @@
+@charset "UTF-8";
+
+/* ==========================================================================
+   登录 / 注册：居中卡片、印刷感标题
+   ========================================================================== */
+
+/* 整页锁定：高度锁定为一屏，滚动只发生在页面内部，
+   配合 overscroll-behavior 干掉手机端上下拉的回弹（橡皮筋效果） */
+.auth-body {
+    display: flex;
+    height: 100vh;
+    height: 100dvh;      /* dvh 跟随地址栏收缩，避免 100vh 造成的跳动 */
+    /* 覆盖 base.css 里的 min-height:100vh，否则在手机上仍会多出一点可滚动高度 */
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 20px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: none;
+    background-color: var(--paper);
+    background-image: radial-gradient(circle at 50% -10%, #FFFDF9 0%, rgba(247, 244, 239, 0) 62%);
+}
+
+/* margin:auto 代替 align-items:center：内容比屏幕高时顶部不会被裁掉 */
+.auth-card {
+    position: relative;
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 400px;
+    margin: auto;
+    overflow: hidden;
+    padding: 42px 36px 32px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-2);
+}
+
+.auth-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--accent);
+}
+
+.auth-head { margin-bottom: 28px; }
+
+.auth-mark {
+    display: block;
+    margin-bottom: 18px;
+    font-size: 10px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.auth-head h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.auth-head p {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.auth-form .field > label {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+}
+
+.auth-form .btn { margin-top: 6px; }
+
+.auth-switch {
+    margin-top: 22px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.auth-switch a {
+    color: var(--accent);
+    border-bottom: 1px solid rgba(176, 64, 28, 0.35);
+}
+
+.auth-switch .sep {
+    margin: 0 6px;
+    color: #C9BFB3;
+}
+
+.error-msg {
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--danger);
+    background: var(--danger-wash);
+    border-left: 2px solid var(--danger);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.error-msg .msg-link {
+    margin-left: 6px;
+    font-weight: 600;
+    color: var(--danger);
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(163, 43, 37, 0.35);
+}
+
+.ok-msg {
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #33553C;
+    background: var(--success-wash);
+    border-left: 2px solid var(--success);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+/* 密保问题展示块 */
+.question-box {
+    padding: 14px 16px;
+    background: var(--accent-wash);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.question-box .q-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.question-box p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+    word-break: break-word;
+}
+
+.form-hint {
+    margin-top: -2px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+}
+
+/* 手机端压缩间距，让注册表单也能一屏放下（不需要滚动） */
+@media (max-width: 480px) {
+    .auth-body { padding: 14px; }
+
+    .auth-card { padding: 30px 22px 24px; }
+
+    .auth-head { margin-bottom: 20px; }
+    .auth-head h1 { font-size: 22px; }
+    .auth-mark { margin-bottom: 14px; }
+
+    .auth-form { gap: 14px; }
+
+    .auth-switch { margin-top: 18px; }
+}
+
+/* 矮屏（横屏、小屏手机）进一步收紧 */
+@media (max-height: 640px) {
+    .auth-body { padding: 10px; }
+
+    .auth-card { padding: 22px 22px 18px; }
+
+    .auth-head { margin-bottom: 16px; }
+    .auth-mark { display: none; }
+    .auth-head h1 { font-size: 20px; }
+    .auth-head p { display: none; }
+
+    .auth-form { gap: 10px; }
+}
