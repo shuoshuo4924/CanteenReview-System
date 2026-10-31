@@ -4,581 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>吃啥饭 · 校园食堂评价</title>
-    <style>
-        :root {
-            --brand: #FF5F2E;
-            --brand-dark: #E8501F;
-            --star: #FFB400;
-            --bg: #FFF8F4;
-            --card: #FFFFFF;
-            --text: #1F2937;
-            --muted: #6B7280;
-            --line: #F2E6DE;
-            --radius: 16px;
-        }
 
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            -webkit-font-smoothing: antialiased;
-        }
-
-        a { text-decoration: none; color: inherit; }
-
-        /* ============ 顶部导航 ============ */
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--line);
-        }
-
-        .topbar-inner {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-        }
-
-        .brand {
-            font-size: 20px;
-            font-weight: 800;
-            color: var(--brand);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            letter-spacing: -0.5px;
-        }
-
-        .user-area {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 14px;
-        }
-
-        .avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #FF8A5B, #FF5F2E);
-            color: #fff;
-            display: grid;
-            place-items: center;
-            font-weight: 700;
-            font-size: 14px;
-        }
-
-        .btn {
-            padding: 8px 18px;
-            border-radius: 999px;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all .2s;
-        }
-
-        .btn-primary { background: var(--brand); color: #fff; }
-        .btn-primary:hover { background: var(--brand-dark); }
-
-        .btn-ghost { color: var(--muted); }
-        .btn-ghost:hover { color: var(--brand); }
-
-        /* ============ Hero ============ */
-        .hero {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 36px 20px 4px;
-        }
-
-        .hero h1 {
-            margin: 0 0 8px;
-            font-size: 30px;
-            letter-spacing: -0.5px;
-        }
-
-        .hero h1 em {
-            font-style: normal;
-            color: var(--brand);
-        }
-
-        .hero p {
-            margin: 0;
-            color: var(--muted);
-            font-size: 15px;
-        }
-
-        .stats {
-            display: flex;
-            gap: 36px;
-            margin-top: 22px;
-            flex-wrap: wrap;
-        }
-
-        .stat b {
-            display: block;
-            font-size: 26px;
-            color: var(--brand);
-            line-height: 1.2;
-        }
-
-        .stat span { font-size: 13px; color: var(--muted); }
-
-        /* ============ 区块 ============ */
-        .section {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 30px 20px;
-        }
-
-        .section-head {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-
-        .section-head h2 {
-            margin: 0;
-            font-size: 19px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .section-head .sub {
-            font-size: 13px;
-            color: var(--muted);
-        }
-
-        /* ============ 排行榜（Top3 卡片） ============ */
-        .rank-list {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-        }
-
-        .rank-item {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 8px;
-            background: var(--card);
-            border-radius: var(--radius);
-            padding: 0 0 16px; /* 顶部图片贴边，其余内边距单独给 */
-            box-shadow: 0 4px 20px rgba(180, 120, 90, 0.07);
-            transition: transform .25s, box-shadow .25s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* 卡片顶部图片 */
-        .rank-thumb {
-            width: 100%;
-            height: 120px;
-            display: grid;
-            place-items: center;
-            font-size: 40px;
-            background: linear-gradient(135deg, #FFE9DC 0%, #FFD5C2 100%);
-            overflow: hidden;
-        }
-
-        .rank-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .rank-item:nth-child(2) .rank-thumb {
-            background: linear-gradient(135deg, #E7F3E4 0%, #CFE8C9 100%);
-        }
-
-        .rank-item:nth-child(3) .rank-thumb {
-            background: linear-gradient(135deg, #E6EFFA 0%, #CBDDF4 100%);
-        }
-
-        /* 图片下方内容区统一内边距 */
-        .rank-top, .rank-name, .rank-bottom {
-            padding-left: 16px;
-            padding-right: 16px;
-        }
-
-        .rank-item:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 28px rgba(180, 120, 90, 0.15);
-        }
-
-        /* 前三名顶部彩带效果 */
-        .rank-item:nth-child(1) { border-top: 4px solid #FFC531; }
-        .rank-item:nth-child(2) { border-top: 4px solid #C7CDD6; }
-        .rank-item:nth-child(3) { border-top: 4px solid #E39B5C; }
-
-        .rank-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 4px;
-        }
-
-        .rank-medal {
-            font-size: 24px;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-
-        .rank-score {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--star);
-            white-space: nowrap;
-        }
-
-        .rank-name {
-            font-size: 17px;
-            font-weight: 700;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .rank-bottom {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            margin-top: 2px;
-        }
-
-        .rank-tag {
-            display: inline-block;
-            font-size: 12px;
-            color: var(--muted);
-            background: #F6F1EE;
-            padding: 2px 10px;
-            border-radius: 999px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .rank-price {
-            font-size: 14px;
-            color: var(--brand);
-            font-weight: 700;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        /* ============ 搜索框 ============ */
-        .search-bar {
-            display: flex;
-            gap: 10px;
-            background: var(--card);
-            border-radius: 14px;
-            padding: 12px;
-            box-shadow: 0 4px 18px rgba(180, 120, 90, 0.07);
-            margin-bottom: 18px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .search-bar input[type="text"] {
-            flex: 1;
-            min-width: 160px;
-            height: 44px;
-            padding: 0 14px;
-            font-size: 15px;
-            font-family: inherit;
-            color: var(--text);
-            background: #FFFBF8;
-            border: 1.5px solid var(--line);
-            border-radius: 10px;
-            outline: none;
-            transition: border-color .2s;
-        }
-
-        .search-bar input[type="text"]:focus { border-color: var(--brand); background: #fff; }
-
-        .search-bar select {
-            height: 44px;
-            padding: 0 12px;
-            font-size: 14px;
-            font-family: inherit;
-            color: var(--text);
-            background: #FFFBF8;
-            border: 1.5px solid var(--line);
-            border-radius: 10px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .search-btn {
-            height: 44px;
-            padding: 0 22px;
-            border: none;
-            border-radius: 10px;
-            background: var(--brand);
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
-            transition: background .2s;
-        }
-
-        .search-btn:hover { background: var(--brand-dark); }
-
-        .search-clear {
-            height: 44px;
-            padding: 0 16px;
-            border-radius: 10px;
-            background: #F6F1EE;
-            color: var(--muted);
-            font-size: 14px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            transition: background .2s;
-        }
-
-        .search-clear:hover { background: #ECE3DD; }
-
-        .search-result-tip {
-            font-size: 14px;
-            color: var(--muted);
-            margin-bottom: 16px;
-        }
-
-        .search-result-tip b { color: var(--brand); }
-
-        /* ============ 菜品网格 ============ */
-        .dish-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 18px;
-        }
-
-        .dish-card {
-            background: var(--card);
-            border-radius: var(--radius);
-            overflow: hidden;
-            box-shadow: 0 4px 18px rgba(180, 120, 90, 0.07);
-            transition: transform .25s, box-shadow .25s;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .dish-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 28px rgba(180, 120, 90, 0.15);
-        }
-
-        .dish-thumb {
-            height: 148px;
-            display: grid;
-            place-items: center;
-            font-size: 44px;
-            background: linear-gradient(135deg, #FFE9DC 0%, #FFD5C2 100%);
-            overflow: hidden;
-        }
-
-        .dish-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .dish-card:nth-child(3n+2) .dish-thumb {
-            background: linear-gradient(135deg, #E7F3E4 0%, #CFE8C9 100%);
-        }
-
-        .dish-card:nth-child(3n+3) .dish-thumb {
-            background: linear-gradient(135deg, #E6EFFA 0%, #CBDDF4 100%);
-        }
-
-        .dish-body { padding: 14px 16px 16px; }
-
-        .dish-title {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 8px;
-        }
-
-        .dish-name {
-            font-size: 16px;
-            font-weight: 700;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .dish-price {
-            font-size: 15px;
-            font-weight: 800;
-            color: var(--brand);
-            flex-shrink: 0;
-        }
-
-        .dish-meta {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .dish-tag {
-            font-size: 12px;
-            color: var(--muted);
-            background: #F6F1EE;
-            padding: 3px 10px;
-            border-radius: 999px;
-            white-space: nowrap;
-        }
-
-        .dish-rate {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--star);
-            white-space: nowrap;
-        }
-
-        .dish-rate .none { color: #C7C1BC; font-weight: 500; }
-
-        /* ============ 分页栏 ============ */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            margin-top: 28px;
-            flex-wrap: wrap;
-        }
-
-        .pagination a,
-        .pagination span {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 40px;
-            height: 40px;
-            padding: 0 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text);
-            background: var(--card);
-            border: 1.5px solid var(--line);
-            transition: all .2s;
-            user-select: none;
-        }
-
-        .pagination a:hover {
-            border-color: var(--brand);
-            color: var(--brand);
-        }
-
-        /* 当前页高亮 */
-        .pagination .active {
-            background: var(--brand);
-            border-color: var(--brand);
-            color: #fff;
-        }
-
-        /* 禁用态（首页的上一页 / 末页的下一页） */
-        .pagination .disabled {
-            color: #C7C1BC;
-            background: #F6F1EE;
-            border-color: #F0E6DF;
-            cursor: not-allowed;
-        }
-
-        .pagination .dots {
-            border: none;
-            background: transparent;
-            color: var(--muted);
-            min-width: 24px;
-            padding: 0;
-        }
-
-        .pagination .page-info {
-            width: 100%;
-            text-align: center;
-            font-size: 13px;
-            color: var(--muted);
-            margin-top: 4px;
-            border: none;
-            background: transparent;
-            height: auto;
-        }
-
-        /* ============ 空状态 ============ */
-        .empty {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--muted);
-        }
-
-        .empty .icon { font-size: 44px; display: block; margin-bottom: 12px; }
-
-        /* ============ 页脚 ============ */
-        .footer {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 30px 20px 50px;
-            text-align: center;
-            font-size: 13px;
-            color: #B8AFA9;
-        }
-
-        /* ============ 手机适配 ============ */
-        @media (max-width: 640px) {
-            .hero { padding-top: 24px; }
-            .hero h1 { font-size: 23px; }
-            .stats { gap: 24px; }
-            .stat b { font-size: 21px; }
-            .section { padding: 22px 16px; }
-            .dish-grid {
-                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-                gap: 12px;
-            }
-            .dish-thumb { height: 110px; font-size: 34px; }
-            .dish-body { padding: 12px 12px 14px; }
-            .dish-name { font-size: 15px; }
-            .rank-list { grid-template-columns: 1fr; gap: 12px; }
-            .rank-item { padding: 0 0 14px; gap: 6px; }
-            .rank-thumb { height: 150px; font-size: 44px; }
-            .rank-name { font-size: 16px; }
-            .topbar-inner { padding: 10px 16px; }
-            .brand { font-size: 18px; }
-            .search-bar { padding: 10px; gap: 8px; }
-            .search-bar input[type="text"] { flex-basis: 100%; }
-            .search-bar select { flex: 1; }
-            .search-btn { flex: 1; }
-            .pagination { gap: 6px; margin-top: 22px; }
-            .pagination a, .pagination span { min-width: 36px; height: 36px; padding: 0 8px; font-size: 13px; }
-        }
-    </style>
+    <!-- 设计系统：令牌、排版与通用组件 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <!-- 首页专属：Hero、人气榜、菜品网格 -->
+    <link rel="stylesheet" th:href="@{/css/home.css}">
 </head>
 <body>
 
 <!-- ================= 顶部导航 ================= -->
-<div class="topbar">
+<header class="topbar">
     <div class="topbar-inner">
-        <a href="/dishes" class="brand">🍚 吃啥饭</a>
+        <a href="/dishes" class="brand">吃啥饭</a>
 
-        <div class="user-area">
+        <nav class="user-area">
             <th:block th:if="${session.loginUser != null}">
                 <div class="avatar" th:text="${#strings.substring(session.loginUser.username, 0, 1).toUpperCase()}">A</div>
                 <span th:text="${session.loginUser.username}">同学</span>
@@ -590,178 +29,179 @@
                 <a href="/login" class="btn btn-ghost">登录</a>
                 <a href="/register" class="btn btn-primary">注册</a>
             </th:block>
-        </div>
+        </nav>
     </div>
-</div>
+</header>
 
-<!-- ================= Hero ================= -->
-<div class="hero">
-    <h1>今天<em>吃点啥</em>？</h1>
-    <p>真实同学评价，帮你避开食堂雷区</p>
+<main class="shell">
 
-    <div class="stats">
-        <div class="stat">
-            <b th:text="${dishPage != null ? dishPage.total : #lists.size(dishes)}">15</b>
-            <span>在售菜品</span>
-        </div>
-        <div class="stat">
-            <b th:text="${#lists.size(topDishes) >= 3 ? 3 : #lists.size(topDishes)}">3</b>
-            <span>人气上榜</span>
-        </div>
-    </div>
-</div>
+    <!-- ================= Hero ================= -->
+    <section class="hero">
+        <span class="hero-kicker">Campus Canteen Review</span>
+        <h1>今天，<em>吃点啥</em>？</h1>
+        <p>真实同学评价，帮你避开食堂雷区。</p>
 
-<!-- ================= 人气榜 ================= -->
-<div class="section">
-    <div class="section-head">
-        <h2>🏆 人气榜</h2>
-        <span class="sub">按平均分排序</span>
-    </div>
-
-    <div class="rank-list">
-        <!-- 只展示前 3 名 -->
-        <a class="rank-item" th:each="topDish, iterStat : ${topDishes}"
-           th:if="${iterStat.count <= 3}"
-           th:href="@{/dish/detail(id=${topDish.id})}">
-
-            <!-- 菜品图片：有图显示图片，没图显示占位 -->
-            <div class="rank-thumb">
-                <img th:if="${topDish.imageUrl != null and !#strings.isEmpty(topDish.imageUrl)}"
-                     th:src="${topDish.imageUrl}" alt="菜品图">
-                <span th:if="${topDish.imageUrl == null or #strings.isEmpty(topDish.imageUrl)}">🍱</span>
+        <div class="stats">
+            <div class="stat">
+                <b th:text="${dishPage != null ? dishPage.total : #lists.size(dishes)}">15</b>
+                <span>在售菜品</span>
             </div>
-
-            <div class="rank-top">
-                <span class="rank-medal" th:if="${iterStat.count == 1}">🥇</span>
-                <span class="rank-medal" th:if="${iterStat.count == 2}">🥈</span>
-                <span class="rank-medal" th:if="${iterStat.count == 3}">🥉</span>
-                <span class="rank-score">
-                    ★ <span th:text="${topDish.avgRating != null ? topDish.avgRating : '0.0'}">0.0</span>
-                </span>
+            <div class="stat">
+                <b th:text="${#lists.size(topDishes) >= 3 ? 3 : #lists.size(topDishes)}">3</b>
+                <span>人气上榜</span>
             </div>
-
-            <div class="rank-name" th:text="${topDish.name}">麻辣香锅</div>
-
-            <div class="rank-bottom">
-                <span class="rank-tag" th:text="${topDish.canteen}">三食堂</span>
-                <span class="rank-price"
-                      th:text="${topDish.price != null ? '¥' + #numbers.formatDecimal(topDish.price, 1, 0) : '¥ --'}">
-                    ¥12
-                </span>
-            </div>
-        </a>
-
-        <div class="empty" th:if="${#lists.isEmpty(topDishes)}" style="grid-column: 1 / -1;">
-            <span class="icon">📭</span>
-            还没有评分数据，快去当第一个评价的人吧
         </div>
-    </div>
-</div>
+    </section>
 
-<!-- ================= 全部菜品 ================= -->
-<div class="section">
-    <div class="section-head">
-        <h2>🍽️ 全部菜品</h2>
-        <span class="sub" th:text="'共 ' + ${#lists.size(dishes)} + ' 道'">共 15 道</span>
-    </div>
+    <!-- ================= 人气榜 ================= -->
+    <section class="section">
+        <div class="section-head">
+            <h2>人气榜</h2>
+            <span class="sub">按平均分排序</span>
+        </div>
 
-    <!-- 搜索框 -->
-    <form class="search-bar" action="/dishes" method="get">
-        <input type="text" name="keyword" placeholder="搜菜名或食堂，如：红烧肉 / 一食堂"
-               th:value="${keyword}">
-        <select name="minRating">
-            <option value="">全部评分</option>
-            <option value="4.5" th:selected="${minRating != null and minRating == 4.5}">4.5 分以上</option>
-            <option value="4" th:selected="${minRating != null and minRating == 4}">4 分以上</option>
-            <option value="3" th:selected="${minRating != null and minRating == 3}">3 分以上</option>
-        </select>
-        <button type="submit" class="search-btn">🔍 搜索</button>
-        <a th:if="${searching}" href="/dishes" class="search-clear">清除</a>
-    </form>
+        <div class="rank-list">
+            <!-- 只展示前 3 名 -->
+            <a class="rank-item" th:each="topDish, iterStat : ${topDishes}"
+               th:if="${iterStat.count <= 3}"
+               th:href="@{/dish/detail(id=${topDish.id})}">
 
-    <!-- 搜索结果提示 -->
-    <div class="search-result-tip" th:if="${searching}">
-        找到 <b th:text="${#lists.size(dishes)}">0</b> 个结果
-        <span th:if="${keyword != null and !keyword.isBlank()}" th:text="'，关键词：' + ${keyword}"></span>
-    </div>
-
-    <div class="dish-grid">
-        <a class="dish-card" th:each="dish : ${dishes}" th:href="@{/dish/detail(id=${dish.id})}">
-
-            <!-- 有图显示图片，没图显示渐变占位 -->
-            <div class="dish-thumb">
-                <img th:if="${dish.imageUrl != null and !#strings.isEmpty(dish.imageUrl)}"
-                     th:src="${dish.imageUrl}" alt="菜品图">
-                <span th:if="${dish.imageUrl == null or #strings.isEmpty(dish.imageUrl)}">🍱</span>
-            </div>
-
-            <div class="dish-body">
-                <div class="dish-title">
-                    <span class="dish-name" th:text="${dish.name}">红烧肉</span>
-                    <span class="dish-price"
-                          th:text="${dish.price != null ? '¥' + #numbers.formatDecimal(dish.price, 1, 0) : '¥ --'}">
-                        ¥12
-                    </span>
+                <!-- 菜品图片：有图显示图片，没图用菜名首字做占位 -->
+                <div class="rank-thumb">
+                    <img th:if="${topDish.imageUrl != null and !#strings.isEmpty(topDish.imageUrl)}"
+                         th:src="${topDish.imageUrl}" th:alt="${topDish.name}">
+                    <span th:if="${topDish.imageUrl == null or #strings.isEmpty(topDish.imageUrl)}"
+                          th:text="${#strings.isEmpty(topDish.name) ? '菜' : #strings.substring(topDish.name, 0, 1)}">菜</span>
                 </div>
 
-                <div class="dish-meta">
-                    <span class="dish-tag" th:text="${dish.canteen}">一食堂</span>
-                    <span class="dish-rate" th:if="${dish.avgRating != null and dish.avgRating > 0}">
-                        ★ <span th:text="${dish.avgRating}">4.5</span>
-                    </span>
-                    <span class="dish-rate none" th:if="${dish.avgRating == null or dish.avgRating == 0}">暂无评分</span>
+                <div class="rank-body">
+                    <div class="rank-line">
+                        <span class="rank-num" th:text="${#numbers.formatInteger(iterStat.count, 2)}">01</span>
+                        <span class="rank-score">
+                            ★ <span th:text="${topDish.avgRating != null ? topDish.avgRating : '0.0'}">0.0</span>
+                        </span>
+                    </div>
+
+                    <div class="rank-name" th:text="${topDish.name}">麻辣香锅</div>
+
+                    <div class="rank-meta">
+                        <span class="rank-tag" th:text="${topDish.canteen}">三食堂</span>
+                        <span class="rank-price"
+                              th:text="${topDish.price != null ? '¥' + #numbers.formatDecimal(topDish.price, 1, 0) : '¥ --'}">
+                            ¥12
+                        </span>
+                    </div>
                 </div>
+            </a>
+
+            <div class="empty empty-wide" th:if="${#lists.isEmpty(topDishes)}">
+                <span class="icon">📭</span>
+                还没有评分数据，快去当第一个评价的人吧
             </div>
-        </a>
-    </div>
+        </div>
+    </section>
 
-    <!-- 搜索无结果 -->
-    <div class="empty" th:if="${searching and #lists.isEmpty(dishes)}">
-        <span class="icon">🔍</span>
-        没有找到符合条件的菜品，换个关键词试试吧
-    </div>
+    <!-- ================= 全部菜品 ================= -->
+    <section class="section">
+        <div class="section-head">
+            <h2>全部菜品</h2>
+            <span class="sub" th:text="'共 ' + ${#lists.size(dishes)} + ' 道'">共 15 道</span>
+        </div>
 
-    <!-- 没有任何菜品 -->
-    <div class="empty" th:if="${!searching and #lists.isEmpty(dishes)}">
-        <span class="icon">🍽️</span>
-        还没有菜品，等管理员上新吧
-    </div>
+        <!-- 搜索框 -->
+        <form class="search-bar" action="/dishes" method="get">
+            <input type="text" name="keyword" placeholder="搜菜名或食堂，如：红烧肉 / 一食堂"
+                   th:value="${keyword}">
+            <select name="minRating">
+                <option value="">全部评分</option>
+                <option value="4.5" th:selected="${minRating != null and minRating == 4.5}">4.5 分以上</option>
+                <option value="4" th:selected="${minRating != null and minRating == 4}">4 分以上</option>
+                <option value="3" th:selected="${minRating != null and minRating == 3}">3 分以上</option>
+            </select>
+            <button type="submit" class="search-btn">搜索</button>
+            <a th:if="${searching}" href="/dishes" class="search-clear">清除</a>
+        </form>
 
-    <!-- 分页栏：仅在有多页时显示 -->
-    <div class="pagination" th:if="${dishPage != null and dishPage.pages > 1}"
-         th:with="cur=${dishPage.current}, total=${dishPage.pages}">
+        <!-- 搜索结果提示 -->
+        <div class="search-result-tip" th:if="${searching}">
+            找到 <b th:text="${#lists.size(dishes)}">0</b> 个结果
+            <span th:if="${keyword != null and !keyword.isBlank()}" th:text="'，关键词：' + ${keyword}"></span>
+        </div>
 
-        <!-- 上一页 -->
-        <a th:if="${cur > 1}"
-           th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${cur - 1}, size=${dishPage.size})}">‹ 上一页</a>
-        <span th:if="${cur <= 1}" class="disabled">‹ 上一页</span>
+        <div class="dish-grid">
+            <a class="dish-card" th:each="dish : ${dishes}" th:href="@{/dish/detail(id=${dish.id})}">
 
-        <!-- 页码：首尾 + 当前页附近，用省略号收拢（避免手机上页码太多撑爆） -->
-        <th:block th:each="p : ${#numbers.sequence(1, total)}">
-            <!-- 第一页、最后一页、当前页 ±2 范围内才显示 -->
-            <a th:if="${p == 1 or p == total or (p >= cur - 2 and p <= cur + 2)}"
-               th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${p}, size=${dishPage.size})}"
-               th:text="${p}"
-               th:classappend="${p == cur} ? 'active'"></a>
-            <!-- 需要省略号的位置：在当前页左侧、且和第一页隔了至少一个 -->
-            <span th:if="${p == cur - 3 and p > 1}" class="dots">…</span>
-            <!-- 右侧省略号 -->
-            <span th:if="${p == cur + 3 and p < total}" class="dots">…</span>
-        </th:block>
+                <!-- 有图显示图片，没图用菜名首字占位 -->
+                <div class="dish-thumb">
+                    <img th:if="${dish.imageUrl != null and !#strings.isEmpty(dish.imageUrl)}"
+                         th:src="${dish.imageUrl}" th:alt="${dish.name}">
+                    <span th:if="${dish.imageUrl == null or #strings.isEmpty(dish.imageUrl)}"
+                          th:text="${#strings.isEmpty(dish.name) ? '菜' : #strings.substring(dish.name, 0, 1)}">菜</span>
+                </div>
 
-        <!-- 下一页 -->
-        <a th:if="${cur < total}"
-           th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${cur + 1}, size=${dishPage.size})}">下一页 ›</a>
-        <span th:if="${cur >= total}" class="disabled">下一页 ›</span>
+                <div class="dish-body">
+                    <div class="dish-title">
+                        <span class="dish-name" th:text="${dish.name}">红烧肉</span>
+                        <span class="dish-price"
+                              th:text="${dish.price != null ? '¥' + #numbers.formatDecimal(dish.price, 1, 0) : '¥ --'}">
+                            ¥12
+                        </span>
+                    </div>
 
-        <!-- 手机端友好提示：第 x / y 页 -->
-        <span class="page-info" th:text="'第 ' + ${cur} + ' / ' + ${total} + ' 页，共 ' + ${dishPage.total} + ' 道菜'"></span>
-    </div>
-</div>
+                    <div class="dish-meta">
+                        <span class="dish-tag" th:text="${dish.canteen}">一食堂</span>
+                        <span class="dish-rate" th:if="${dish.avgRating != null and dish.avgRating > 0}">
+                            ★ <span th:text="${dish.avgRating}">4.5</span>
+                        </span>
+                        <span class="dish-rate none" th:if="${dish.avgRating == null or dish.avgRating == 0}">暂无评分</span>
+                    </div>
+                </div>
+            </a>
+        </div>
 
-<div class="footer">
-    🍚 吃啥饭 · 校园食堂评价系统
-</div>
+        <!-- 搜索无结果 -->
+        <div class="empty" th:if="${searching and #lists.isEmpty(dishes)}">
+            <span class="icon">🔍</span>
+            没有找到符合条件的菜品，换个关键词试试吧
+        </div>
+
+        <!-- 没有任何菜品 -->
+        <div class="empty" th:if="${!searching and #lists.isEmpty(dishes)}">
+            <span class="icon">🍽️</span>
+            还没有菜品，等管理员上新吧
+        </div>
+
+        <!-- 分页栏：仅在有多页时显示 -->
+        <div class="pagination" th:if="${dishPage != null and dishPage.pages > 1}"
+             th:with="cur=${dishPage.current}, total=${dishPage.pages}">
+
+            <!-- 上一页：文字用 span 包住，手机端只留箭头 -->
+            <a th:if="${cur > 1}"
+               th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${cur - 1}, size=${dishPage.size})}">‹<span class="pg-label">上一页</span></a>
+            <span th:if="${cur <= 1}" class="disabled">‹<span class="pg-label">上一页</span></span>
+
+            <!-- 页码：首尾 + 当前页附近，用省略号收拢 -->
+            <th:block th:each="p : ${#numbers.sequence(1, total)}">
+                <a th:if="${p == 1 or p == total or (p >= cur - 2 and p <= cur + 2)}"
+                   th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${p}, size=${dishPage.size})}"
+                   th:text="${p}"
+                   th:classappend="${p == cur} ? 'active'"></a>
+                <span th:if="${p == cur - 3 and p > 1}" class="dots">…</span>
+                <span th:if="${p == cur + 3 and p < total}" class="dots">…</span>
+            </th:block>
+
+            <!-- 下一页 -->
+            <a th:if="${cur < total}"
+               th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${cur + 1}, size=${dishPage.size})}"><span class="pg-label">下一页</span>›</a>
+            <span th:if="${cur >= total}" class="disabled"><span class="pg-label">下一页</span>›</span>
+
+            <span class="page-info" th:text="'第 ' + ${cur} + ' / ' + ${total} + ' 页，共 ' + ${dishPage.total} + ' 道菜'"></span>
+        </div>
+    </section>
+
+</main>
+
+<footer class="footer">吃啥饭 · 校园食堂评价系统</footer>
 
 </body>
 </html>

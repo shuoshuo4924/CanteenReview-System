@@ -19,14 +19,21 @@ DROP TABLE IF EXISTS `user`;
 -- 用户表
 -- -------------------------------------------------------------
 CREATE TABLE `user` (
-    id       BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    username VARCHAR(50)  NOT NULL COMMENT '用户名',
-    password VARCHAR(100) NOT NULL COMMENT '密码（BCrypt 加密后的密文）',
-    role     VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色：USER / ADMIN',
+    id                BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    username          VARCHAR(50)  NOT NULL COMMENT '用户名',
+    password          VARCHAR(100) NOT NULL COMMENT '密码（BCrypt 加密后的密文）',
+    role              VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色：USER / ADMIN',
+    security_question VARCHAR(200)          DEFAULT NULL COMMENT '密保问题',
+    security_answer   VARCHAR(200)          DEFAULT NULL COMMENT '密保答案（BCrypt 加密后的密文）',
     PRIMARY KEY (id),
     UNIQUE KEY uk_username (username)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='用户表';
+
+-- 已有数据库不重建表时，单独执行下面这条升级（新增密保字段）：
+-- ALTER TABLE `user`
+--     ADD COLUMN security_question VARCHAR(200) DEFAULT NULL COMMENT '密保问题' AFTER `role`,
+--     ADD COLUMN security_answer   VARCHAR(200) DEFAULT NULL COMMENT '密保答案（BCrypt 密文）' AFTER security_question;
 
 -- -------------------------------------------------------------
 -- 菜品表

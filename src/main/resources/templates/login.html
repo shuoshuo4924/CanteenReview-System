@@ -2,170 +2,37 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <!-- 关键：没有这一行，手机上整个页面会被缩小 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 · 吃啥饭</title>
-    <style>
-        :root {
-            --brand: #FF5F2E;
-            --brand-dark: #E8501F;
-            --text: #1F2937;
-            --muted: #6B7280;
-            --line: #F2E6DE;
-        }
 
-        * { box-sizing: border-box; }
-
-        /* 锁死页面高度，禁止上下拖动 / 橡皮筋回弹 */
-        html, body {
-            height: 100%;
-            margin: 0;
-            overflow: hidden;
-            overscroll-behavior: none;
-        }
-
-        body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px 20px;
-            font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
-            background: linear-gradient(160deg, #FFF8F4 0%, #FFEFE4 100%);
-            color: var(--text);
-            -webkit-font-smoothing: antialiased;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .card {
-            width: 100%;
-            max-width: 380px;
-            background: #fff;
-            border-radius: 20px;
-            padding: 34px 28px 28px;
-            box-shadow: 0 12px 40px rgba(180, 120, 90, 0.12);
-        }
-
-        .head {
-            text-align: center;
-            margin-bottom: 26px;
-        }
-
-        .logo {
-            font-size: 42px;
-            line-height: 1;
-            margin-bottom: 12px;
-        }
-
-        .head h1 {
-            margin: 0 0 6px;
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
-
-        .head p {
-            margin: 0;
-            font-size: 13px;
-            color: var(--muted);
-        }
-
-        .error {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #FFEDEA;
-            color: #D93B21;
-            border-left: 4px solid #D93B21;
-            padding: 12px 14px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 18px;
-        }
-
-        .field { margin-bottom: 16px; }
-
-        .field label {
-            display: block;
-            font-size: 13px;
-            font-weight: 700;
-            color: #4B5563;
-            margin-bottom: 8px;
-        }
-
-        input {
-            width: 100%;
-            height: 50px;
-            padding: 0 15px;
-            /* 关键：必须 >= 16px，否则 iOS 点输入框会自动放大页面 */
-            font-size: 16px;
-            font-family: inherit;
-            color: var(--text);
-            background: #FFFBF8;
-            border: 1.5px solid var(--line);
-            border-radius: 12px;
-            outline: none;
-            transition: border-color .2s, background .2s;
-            -webkit-appearance: none;
-        }
-
-        input::placeholder { color: #C0B6B0; }
-
-        input:focus {
-            border-color: var(--brand);
-            background: #fff;
-        }
-
-        button {
-            width: 100%;
-            height: 52px;
-            margin-top: 8px;
-            border: none;
-            border-radius: 12px;
-            background: var(--brand);
-            color: #fff;
-            font-size: 16px;
-            font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
-            transition: background .2s, transform .1s;
-        }
-
-        button:hover { background: var(--brand-dark); }
-        button:active { transform: scale(0.99); }
-
-        .switch {
-            text-align: center;
-            margin: 22px 0 0;
-            font-size: 14px;
-            color: var(--muted);
-        }
-
-        .switch a {
-            color: var(--brand);
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        .switch a:hover { text-decoration: underline; }
-    </style>
+    <!-- 设计系统：令牌、排版与通用组件 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <!-- 登录 / 注册专属 -->
+    <link rel="stylesheet" th:href="@{/css/auth.css}">
 </head>
-<body>
-<div class="card">
-    <div class="head">
-        <div class="logo">🍚</div>
+<body class="auth-body">
+
+<div class="auth-card">
+    <div class="auth-head">
+        <span class="auth-mark">吃啥饭 · Campus Canteen Review</span>
         <h1>欢迎回来</h1>
         <p>登录后就能给食堂菜品打分了</p>
     </div>
 
-    <div class="error" th:if="${error}">
-        <span th:text="${error}">账号或密码错误</span>
+    <div class="ok-msg" th:if="${ok}">
+        <span th:text="${ok}">密码已重置，请用新密码登录</span>
     </div>
 
-    <form action="/login" method="post">
+    <div class="error-msg" th:if="${error}">
+        <span th:text="${error}">账号或密码错误</span>
+        <a th:if="${notRegistered}" href="/register" class="msg-link">去注册 →</a>
+    </div>
+
+    <form action="/login" method="post" class="auth-form">
         <div class="field">
             <label>用户名</label>
-            <input type="text" name="username" placeholder="请输入用户名" required autocomplete="username">
+            <input type="text" name="username" placeholder="请输入用户名" required autocomplete="username"
+                   th:value="${param.username}">
         </div>
 
         <div class="field">
@@ -173,12 +40,15 @@
             <input type="password" name="password" placeholder="请输入密码" required autocomplete="current-password">
         </div>
 
-        <button type="submit">登录</button>
+        <button type="submit" class="btn btn-primary btn-block">登录</button>
     </form>
 
-    <p class="switch">
+    <p class="auth-switch">
+        <a href="/forgot">忘记密码</a>
+        <span class="sep">·</span>
         没有账号？<a href="/register">立即注册</a>
     </p>
 </div>
+
 </body>
 </html>
