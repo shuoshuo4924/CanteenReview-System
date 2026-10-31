@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${dish.name + ' · 吃啥饭'}">菜品详情</title>
+    <style>
+        :root {
+            --brand: #FF5F2E;
+            --brand-dark: #E8501F;
+            --star: #FFB400;
+            --bg: #FFF8F4;
+            --card: #FFFFFF;
+            --text: #1F2937;
+            --muted: #6B7280;
+            --line: #F2E6DE;
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        /* ============ 顶部返回栏 ============ */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .topbar-inner {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .back {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--muted);
+            transition: color .2s;
+        }
+
+        .back:hover { color: var(--brand); }
+
+        .topbar-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-left: auto;
+            color: #B8AFA9;
+        }
+
+        /* ============ 容器 ============ */
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 24px 20px 60px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 4px 20px rgba(180, 120, 90, 0.08);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        /* ============ 菜品主卡 ============ */
+        .dish-hero {
+            height: 210px;
+            display: grid;
+            place-items: center;
+            font-size: 68px;
+            background: linear-gradient(135deg, #FFE9DC 0%, #FFD5C2 100%);
+            overflow: hidden;
+        }
+
+        .dish-hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .dish-head { padding: 20px 22px 22px; }
+
+        .dish-head-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .dish-name {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 0 0 10px;
+        }
+
+        .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .tag {
+            font-size: 12px;
+            color: var(--muted);
+            background: #F6F1EE;
+            padding: 4px 12px;
+            border-radius: 999px;
+        }
+
+        .tag.price { color: var(--brand); background: #FFF0E8; font-weight: 700; }
+
+        .score-box {
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .score-num {
+            font-size: 34px;
+            font-weight: 800;
+            color: var(--star);
+            line-height: 1;
+        }
+
+        .score-num small { font-size: 14px; color: var(--muted); font-weight: 600; }
+
+        .score-label {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        .score-empty {
+            font-size: 14px;
+            color: #C7C1BC;
+            font-weight: 600;
+            padding-top: 8px;
+        }
+
+        /* ============ 区块标题 ============ */
+        .block-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 22px 0;
+        }
+
+        .block-head h3 {
+            margin: 0;
+            font-size: 17px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .count {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        /* ============ 评价列表 ============ */
+        .review-list { padding: 8px 22px 22px; }
+
+        .review {
+            padding: 18px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .review:last-child { border-bottom: none; }
+
+        .review-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF8A5B, #FF5F2E);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .review-author {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .review-time {
+            font-size: 12px;
+            color: #B8AFA9;
+            margin-top: 2px;
+        }
+
+        .review-stars {
+            margin-left: auto;
+            font-size: 14px;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .review-stars .on { color: var(--star); }
+        .review-stars .off { color: #EAE4E0; }
+
+        .review-text {
+            font-size: 15px;
+            line-height: 1.65;
+            color: #374151;
+            word-break: break-word;
+        }
+
+        .review-img {
+            margin-top: 12px;
+            max-width: 220px;
+            width: 100%;
+            border-radius: 12px;
+            display: block;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .empty {
+            text-align: center;
+            padding: 46px 20px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .empty .icon { font-size: 40px; display: block; margin-bottom: 10px; }
+
+        /* ============ 表单 ============ */
+        .form-body { padding: 18px 22px 24px; }
+
+        .notice {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 16px 22px 22px;
+        }
+
+        .notice.error { background: #FFEDEA; color: #D93B21; border-left: 4px solid #D93B21; }
+        .notice.ok { background: #EAF7EC; color: #2E7D32; border-left: 4px solid #2E7D32; }
+        .notice.info { background: #FFF6E8; color: #B26A00; border-left: 4px solid #FFB400; }
+
+        .field { margin-bottom: 20px; }
+
+        .field > label {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #4B5563;
+        }
+
+        /* 星星评分选择器 */
+        .star-picker {
+            display: inline-flex;
+            flex-direction: row-reverse;
+            gap: 2px;
+        }
+
+        .star-picker input { display: none; }
+
+        .star-picker label {
+            font-size: 34px;
+            line-height: 1;
+            color: #EAE4E0;
+            cursor: pointer;
+            transition: color .15s, transform .15s;
+        }
+
+        .star-picker input:checked ~ label,
+        .star-picker label:hover,
+        .star-picker label:hover ~ label {
+            color: var(--star);
+        }
+
+        .star-picker label:active { transform: scale(1.15); }
+
+        /* 上传图片 */
+        .file-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 18px;
+            border: 2px dashed #F0DCD2;
+            border-radius: 12px;
+            background: #FFFBF8;
+            color: var(--muted);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .file-box:hover { border-color: var(--brand); color: var(--brand); background: #FFF5EF; }
+
+        .file-box input { display: none; }
+
+        .preview {
+            display: none;
+            margin-top: 12px;
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 14px;
+            border: 1.5px solid #F0DCD2;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            outline: none;
+            transition: border-color .2s;
+            background: #FFFBF8;
+            color: var(--text);
+        }
+
+        textarea:focus { border-color: var(--brand); background: #fff; }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: var(--brand);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .2s, transform .1s;
+            font-family: inherit;
+        }
+
+        .btn-submit:hover { background: var(--brand-dark); }
+        .btn-submit:active { transform: scale(0.99); }
+
+        .login-tip { text-align: center; padding: 34px 20px; color: var(--muted); font-size: 14px; }
+        .login-tip a { color: var(--brand); font-weight: 700; }
+
+        /* ============ 手机适配 ============ */
+        @media (max-width: 640px) {
+            .wrap { padding: 16px 14px 48px; }
+            .dish-hero { height: 170px; font-size: 56px; }
+            .dish-head { padding: 16px 16px 18px; }
+            .dish-name { font-size: 20px; }
+            .score-num { font-size: 28px; }
+            .review-list { padding: 6px 16px 18px; }
+            .block-head { padding: 16px 16px 0; }
+            .form-body { padding: 16px 16px 20px; }
+            .notice { margin: 14px 16px 18px; }
+            .star-picker label { font-size: 30px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ================= 顶部返回栏 ================= -->
+<div class="topbar">
+    <div class="topbar-inner">
+        <a href="/dishes" class="back">← 返回列表</a>
+        <span class="topbar-title">🍚 吃啥饭</span>
+    </div>
+</div>
+
+<div class="wrap">
+
+    <!-- ================= 菜品主卡 ================= -->
+    <div class="card">
+        <div class="dish-hero">
+            <img th:if="${dish.imageUrl != null and !#strings.isEmpty(dish.imageUrl)}"
+                 th:src="${dish.imageUrl}" alt="菜品图">
+            <span th:if="${dish.imageUrl == null or #strings.isEmpty(dish.imageUrl)}">🍱</span>
+        </div>
+
+        <div class="dish-head">
+            <div class="dish-head-top">
+                <div>
+                    <h1 class="dish-name" th:text="${dish.name}">红烧肉</h1>
+                    <div class="tags">
+                        <span class="tag" th:text="'📍 ' + ${dish.canteen}">📍 一食堂</span>
+                        <span class="tag price"
+                              th:text="${dish.price != null ? '¥' + #numbers.formatDecimal(dish.price, 1, 0) : '¥ --'}">
+                            ¥12
+                        </span>
+                    </div>
+                </div>
+
+                <div class="score-box" th:if="${dish.avgRating != null and dish.avgRating > 0}">
+                    <div class="score-num">
+                        <span th:text="${dish.avgRating}">4.5</span><small> 分</small>
+                    </div>
+                    <div class="score-label">平均评分</div>
+                </div>
+
+                <div class="score-box" th:if="${dish.avgRating == null or dish.avgRating == 0}">
+                    <div class="score-empty">暂无评分</div>
+                    <div class="score-label">等你来评</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 评价列表 ================= -->
+    <div class="card">
+        <div class="block-head">
+            <h3>💬 同学评价</h3>
+            <span class="count" th:text="'共 ' + ${#lists.size(reviews)} + ' 条'">共 3 条</span>
+        </div>
+
+        <div class="review-list">
+            <div class="empty" th:if="${#lists.isEmpty(reviews)}">
+                <span class="icon">🪑</span>
+                还没有人评价，来抢个沙发吧
+            </div>
+
+            <div class="review" th:each="review : ${reviews}">
+                <div class="review-top">
+                    <div class="avatar"
+                         th:text="${#strings.isEmpty(review.author) ? '匿' : #strings.substring(review.author, 0, 1)}">匿</div>
+
+                    <div>
+                        <div class="review-author"
+                             th:text="${#strings.isEmpty(review.author) ? '匿名同学' : review.author}">小明</div>
+                        <div class="review-time"
+                             th:text="${#temporals.format(review.createTime, 'yyyy-MM-dd HH:mm')}">2026-10-28 12:30</div>
+                    </div>
+
+                    <div class="review-stars">
+                        <span class="on" th:text="${#strings.repeat('★', review.rating)}"></span><span
+                            class="off" th:text="${#strings.repeat('★', 5 - review.rating)}"></span>
+                    </div>
+                </div>
+
+                <div class="review-text" th:text="${review.comment}">这道菜太好吃了！</div>
+
+                <img class="review-img"
+                     th:if="${review.imageUrl != null and !#strings.isEmpty(review.imageUrl)}"
+                     th:src="${review.imageUrl}" alt="买家秀">
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 写评价 ================= -->
+    <div class="card">
+        <div class="block-head">
+            <h3>✍️ 写评价</h3>
+        </div>
+
+        <!-- 错误提示（重复评价等） -->
+        <div class="notice error" th:if="${errorMsg}">
+            <span th:text="${errorMsg}">您已经评价过这道菜啦</span>
+        </div>
+
+        <!-- 未登录 -->
+        <div class="login-tip" th:if="${session.loginUser == null}">
+            还没登录哦，<a href="/login">点这里登录</a> 后再来评价
+        </div>
+
+        <!-- 已评价：隐藏表单 -->
+        <div class="notice ok" th:if="${session.loginUser != null and hasReviewed}">
+            <span>✅ 你已经评价过这道菜啦，感谢你的反馈！</span>
+        </div>
+
+        <!-- 未评价：显示表单 -->
+        <form action="/dish/review" method="post" enctype="multipart/form-data"
+              th:if="${session.loginUser != null and !hasReviewed}">
+            <div class="form-body">
+                <input type="hidden" name="dishId" th:value="${dish.id}">
+
+                <div class="field">
+                    <label>打个分吧</label>
+                    <div class="star-picker">
+                        <input type="radio" name="rating" id="r5" value="5" checked>
+                        <label for="r5" title="5分">★</label>
+                        <input type="radio" name="rating" id="r4" value="4">
+                        <label for="r4" title="4分">★</label>
+                        <input type="radio" name="rating" id="r3" value="3">
+                        <label for="r3" title="3分">★</label>
+                        <input type="radio" name="rating" id="r2" value="2">
+                        <label for="r2" title="2分">★</label>
+                        <input type="radio" name="rating" id="r1" value="1">
+                        <label for="r1" title="1分">★</label>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>评价内容</label>
+                    <textarea name="comment" rows="3" required
+                              placeholder="说说好不好吃、分量足不足、值不值这个价..."></textarea>
+                </div>
+
+                <div class="field">
+                    <label>晒图（可选）</label>
+                    <label class="file-box">
+                        <input type="file" name="imageFile" id="imageInput" accept="image/*">
+                        <span>📷 点击选择图片</span>
+                    </label>
+                    <img id="preview" class="preview" alt="预览">
+                </div>
+
+                <button type="submit" class="btn-submit">提交评价</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+    // 选图后本地预览
+    var imageInput = document.getElementById('imageInput');
+    var preview = document.getElementById('preview');
+    if (imageInput) {
+        imageInput.addEventListener('change', function (e) {
+            var file = e.target.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
