@@ -1,4 +1,9 @@
 spring:
+  # 开发期关闭模板缓存：改完 html 刷新浏览器就能看到，不用重启应用
+  # 部署上线时改回 true 可以省掉每次渲染重新解析模板的开销
+  thymeleaf:
+    cache: false
+
   datasource:
     url: jdbc:mysql://localhost:3307/canteen_review?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
     username: root
@@ -10,6 +15,13 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
+# AI 评价总结（DeepSeek）
+# api-key 建议放环境变量 DEEPSEEK_API_KEY，避免把密钥提交到 git；
+# 本地临时调试也可以直接写在冒号后面，但别提交。
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  model: deepseek-chat
 
 # 图片存储配置（统一在这一处维护，避免代码里到处硬编码路径）
 app:

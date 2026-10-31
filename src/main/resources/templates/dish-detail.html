@@ -62,6 +62,17 @@
             <span class="count" th:text="'共 ' + ${#lists.size(reviews)} + ' 条'">共 3 条</span>
         </div>
 
+        <!-- AI 一句话总结：点按钮才调用，避免每次打开都产生 AI 费用 -->
+        <div class="ai-box">
+            <div class="ai-head">
+                <span class="ai-badge">AI</span>
+                <span class="ai-tip">懒得一条条看？让 AI 帮你总结</span>
+            </div>
+            <div class="ai-text" id="aiText">点右边的按钮，AI 会用一句话告诉你这道菜值不值得吃</div>
+            <button type="button" class="ai-btn" id="aiBtn"
+                    th:attr="data-id=${dish.id},disabled=${#lists.isEmpty(reviews)}">生成总结</button>
+        </div>
+
         <div class="review-list">
             <div class="empty" th:if="${#lists.isEmpty(reviews)}">
                 <span class="icon">🪑</span>
@@ -171,6 +182,33 @@
                 preview.src = URL.createObjectURL(file);
                 preview.style.display = 'block';
             }
+        });
+    }
+
+    // AI 总结：点击后异步请求，不刷新页面
+    var aiBtn = document.getElementById('aiBtn');
+    var aiText = document.getElementById('aiText');
+    if (aiBtn) {
+        aiBtn.addEventListener('click', function () {
+            var dishId = aiBtn.getAttribute('data-id');
+            aiBtn.disabled = true;
+            aiBtn.textContent = '思考中...';
+            aiText.textContent = 'AI 正在阅读同学们的评论...';
+
+            fetch('/dish/ai-summary?id=' + encodeURIComponent(dishId))
+                .then(function (res) {
+                    return res.text();
+                })
+                .then(function (text) {
+                    aiText.textContent = text;
+                    aiBtn.disabled = false;
+                    aiBtn.textContent = '重新生成';
+                })
+                .catch(function () {
+                    aiText.textContent = '网络开小差了，稍后再试一次吧';
+                    aiBtn.disabled = false;
+                    aiBtn.textContent = '重试';
+                });
         });
     }
 </script>

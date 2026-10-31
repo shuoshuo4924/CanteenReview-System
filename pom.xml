@@ -92,6 +92,23 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
+            <!-- JDK 21+ 默认不再自动运行注解处理器（等效 -proc:none），
+                 不显式声明 Lombok 时，实体类的 getter/setter 一律“找不到符号”。
+                 这里写死注解处理器路径，命令行构建就不用再带 -Dmaven.compiler.proc=full。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

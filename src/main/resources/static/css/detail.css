@@ -213,6 +213,74 @@
     border-color: var(--accent);
 }
 
+/* ---------- AI 总结 ---------- */
+
+.ai-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    margin-bottom: 24px;
+    padding: 16px 18px;
+    background: var(--accent-wash);
+    border: 1px solid rgba(176, 64, 28, 0.18);
+    border-radius: var(--r-sm);
+}
+
+.ai-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.ai-badge {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 3px;
+}
+
+.ai-tip {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.ai-text {
+    flex: 1 1 320px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+}
+
+.ai-btn {
+    flex: 0 0 auto;
+    height: 34px;
+    padding: 0 16px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid rgba(176, 64, 28, 0.4);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.ai-btn:hover:not(:disabled) {
+    color: #fff;
+    background: var(--accent);
+}
+
+.ai-btn:disabled {
+    color: var(--muted);
+    border-color: var(--line);
+    cursor: not-allowed;
+}
+
 /* ---------- 响应式 ---------- */
 
 @media (max-width: 640px) {

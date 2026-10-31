@@ -5,24 +5,31 @@ import jakarta.servlet.http.HttpSession;
 import org.example.canteenreview.entity.Dish;
 import org.example.canteenreview.entity.Review;
 import org.example.canteenreview.entity.User;
+import org.example.canteenreview.service.AiService;
 import org.example.canteenreview.service.DishService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class DishController {
 
     @Autowired
     private DishService dishService;
+
+    @Autowired
+    private AiService aiService;
 
     @GetMapping("/")
     public String index() {
@@ -120,6 +127,105 @@ public class DishController {
         model.addAttribute("hasReviewed", hasReviewed);
 
         return "dish-detail";
+    }
+
+    /**
+     * AI 一句话总结：前端 fetch 异步调用，返回纯文本，不阻塞详情页渲染。
+     * 用户点一次才生成一次，避免每次打开页面都产生 AI 费用。
+     */
+    @GetMapping("/dish/ai-summary")
+    @ResponseBody
+    public String aiSummary(@RequestParam("id") Long id) {
+        Dish dish = dishService.getDishById(id);
+        if (dish == null) {
+            return "菜品不存在";
+        }
+        String reviewsText = buildReviewText(dishService.getReviewsByDishId(id));
+        if (reviewsText.isBlank()) {
+            return "还没有人写评价，AI 也没法总结这道菜~";
+        }
+        return aiService.summarizeReviews(dish.getName(), reviewsText);
+    }
+
+    /**
+     * AI 对话框：前端每次把完整对话历史传上来（最多保留最近 10 条）。
+     * 返回 JSON：{"reply": "..."}
+     */
+    @PostMapping("/ai/chat")
+    @ResponseBody
+    public Map<String, String> chat(@RequestBody(required = false) List<Map<String, String>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return Map.of("reply", "想问点什么呢？比如「今天吃什么」");
+        }
+
+        // 只保留最近 10 条、单条最多 300 字，防止有人拼超长文本刷 token
+        List<Map<String, String>> safe = new ArrayList<>();
+        for (Map<String, String> msg : messages.subList(Math.max(0, messages.size() - 10), messages.size())) {
+            if (msg == null) {
+                continue;
+            }
+            String role = msg.get("role");
+            String content = msg.get("content");
+            if (content == null || content.isBlank()) {
+                continue;
+            }
+            if (!"user".equals(role) && !"assistant".equals(role)) {
+                continue;
+            }
+            String text = content.trim();
+            safe.add(Map.of("role", role, "content", text.length() > 300 ? text.substring(0, 300) : text));
+        }
+        if (safe.isEmpty()) {
+            return Map.of("reply", "想问点什么呢？比如「今天吃什么」");
+        }
+        return Map.of("reply", aiService.chat(safe, buildMenuPrompt()));
+    }
+
+    /**
+     * 给 AI 的菜单背景：带上当前评分最高的 10 道菜，回答才不会瞎编。
+     */
+    private String buildMenuPrompt() {
+        StringBuilder sb = new StringBuilder(
+                "你是「吃啥饭」校园食堂的 AI 点菜助手，语气轻松、像大学生平时说话，回答控制在 80 字以内。");
+        List<Dish> top = dishService.getTop10Dishes();
+        if (!top.isEmpty()) {
+            sb.append("当前评分较高的菜品有：");
+            for (Dish dish : top) {
+                sb.append(dish.getName())
+                        .append("（")
+                        .append(dish.getCanteen() == null ? "食堂未知" : dish.getCanteen())
+                        .append("，")
+                        .append(dish.getAvgRating() == null ? "暂无评分" : dish.getAvgRating() + "分")
+                        .append("，")
+                        .append(dish.getPrice() == null ? "价格未知" : dish.getPrice() + "元")
+                        .append("）；");
+            }
+            sb.append("推荐时优先从这些菜里挑。");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 把评价拼成给 AI 的文本：只取有文字内容的，最多 20 条、总长 2000 字，
+     * 防止评价太多把 token 费用和等待时间拉高。
+     */
+    private String buildReviewText(List<Review> reviews) {
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+        for (Review review : reviews) {
+            if (review.getComment() == null || review.getComment().isBlank()) {
+                continue;
+            }
+            String line = "- " + review.getRating() + " 星：" + review.getComment().trim() + "\n";
+            if (sb.length() + line.length() > 2000) {
+                break;
+            }
+            sb.append(line);
+            if (++count >= 20) {
+                break;
+            }
+        }
+        return sb.toString();
     }
 
     // 评价提交
