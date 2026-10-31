@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Controller
 public class DishController {
 
@@ -33,7 +36,8 @@ public class DishController {
             @RequestParam(value = "minRating", required = false) Double minRating,
             @RequestParam(value = "page", defaultValue = "1") Integer page,  // 页码
             @RequestParam(value = "size", defaultValue = "8") Integer size,  // 每页条数
-            Model model) {
+            Model model,
+            RedirectAttributes redirectAttributes) {
 
         boolean searching = (keyword != null && !keyword.isBlank()) || minRating != null;
 
@@ -45,15 +49,26 @@ public class DishController {
         Page<Dish> pageParam = new Page<>(safePage, safeSize);
         Page<Dish> dishPage = dishService.searchDishesWithPage(keyword, minRating, pageParam);
 
-        // 页码越界（如手改 URL 到超大页码）：若当前页没数据且不是第一页，跳回最后一页
-        if (dishPage.getRecords().isEmpty() && dishPage.getPages() > 0 && safePage > dishPage.getPages()) {
-            pageParam = new Page<>(dishPage.getPages(), safeSize);
-            dishPage = dishService.searchDishesWithPage(keyword, minRating, pageParam);
+        // 页码越界（只有 4 页却访问第 5 页）：重定向到最后一页，
+        // 这样内容和地址栏同时被纠正，刷新也不会再错一次
+        long totalPages = dishPage.getPages();
+        if (totalPages > 0 && safePage > totalPages) {
+            redirectAttributes.addAttribute("page", totalPages);
+            redirectAttributes.addAttribute("size", safeSize);
+            if (keyword != null && !keyword.isBlank()) {
+                redirectAttributes.addAttribute("keyword", keyword);
+            }
+            if (minRating != null) {
+                redirectAttributes.addAttribute("minRating", minRating);
+            }
+            return "redirect:/dishes";
         }
 
         // 传给前端的依然是列表，但加上了分页信息
         model.addAttribute("dishes", dishPage.getRecords());
         model.addAttribute("dishPage", dishPage); // 分页栏需要这个对象
+        // 页码序列在服务端算好：页数少时就是 1..N，页数多时用 null 占位省略号
+        model.addAttribute("pageNumbers", buildPageNumbers(dishPage.getCurrent(), dishPage.getPages()));
 
         model.addAttribute("topDishes", dishService.getTop10Dishes());
 
@@ -63,6 +78,35 @@ public class DishController {
         model.addAttribute("searching", searching);
 
         return "dish-list";
+    }
+
+    /**
+     * 生成页码栏要显示的页码：null 代表省略号。
+     * 页数 ≤ 7 时直接返回全部页码（不需要省略号）；
+     * 页数更多时只保留首尾 + 当前页前后各 2 页，中间用 null 收拢。
+     */
+    private static List<Long> buildPageNumbers(long current, long total) {
+        List<Long> numbers = new ArrayList<>();
+        if (total <= 7) {
+            for (long i = 1; i <= total; i++) {
+                numbers.add(i);
+            }
+            return numbers;
+        }
+        numbers.add(1L);
+        long start = Math.max(2, current - 2);
+        long end = Math.min(total - 1, current + 2);
+        if (start > 2) {
+            numbers.add(null);
+        }
+        for (long i = start; i <= end; i++) {
+            numbers.add(i);
+        }
+        if (end < total - 1) {
+            numbers.add(null);
+        }
+        numbers.add(total);
+        return numbers;
     }
 
     // 菜品详情

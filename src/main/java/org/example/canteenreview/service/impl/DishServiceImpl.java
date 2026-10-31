@@ -34,6 +34,9 @@ public class DishServiceImpl implements DishService {
     // 允许上传的图片扩展名白名单（统一按小写比较）
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
 
+    // 中文数字，用于把「1食堂」归一成「一食堂」
+    private static final String[] CN_DIGITS = {"一", "二", "三", "四", "五", "六", "七", "八", "九"};
+
     // 图片保存目录（从配置读取，避免在多处硬编码路径）
     @Value("${app.image-dir}")
     private String imageDir;
@@ -202,6 +205,32 @@ public class DishServiceImpl implements DishService {
         return originalFilename.substring(dot + 1).toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * 食堂名归一化：删掉所有空白、去掉「第」前缀、把「1食堂」这类写法换成「一食堂」。
+     * 这样「第一食堂」「1食堂」「 一食堂 」都会落到同一个值，
+     * 唯一键 uk_dish_name_canteen 才拦得住"同一食堂的同名菜重复录入"。
+     * 传入 null 时原样返回 null，表示"本次不修改食堂"（编辑时用于保持原值）。
+     */
+    private String normalizeCanteen(String canteen) {
+        if (canteen == null) {
+            return null;
+        }
+        String value = canteen.trim().replaceAll("\\s+", "");
+        if (value.isEmpty()) {
+            return "";
+        }
+        if (value.startsWith("第")) {
+            value = value.substring(1);
+        }
+        if (value.length() >= 2 && value.endsWith("食堂")) {
+            char first = value.charAt(0);
+            if (first >= '1' && first <= '9') {
+                value = CN_DIGITS[first - '1'] + value.substring(1);
+            }
+        }
+        return value;
+    }
+
     // ===== 管理员功能 =====
 
     @Override
@@ -210,6 +239,10 @@ public class DishServiceImpl implements DishService {
         if (dish == null || dish.getName() == null || dish.getName().isBlank()) {
             return false;
         }
+        // 菜名 / 食堂名统一清洗，避免同一道菜因写法不同绕过唯一键
+        dish.setName(dish.getName().trim());
+        String canteen = normalizeCanteen(dish.getCanteen());
+        dish.setCanteen(canteen == null ? "" : canteen); // canteen 列为 NOT NULL
         // 新增菜品默认 0 分，避免前端没填导致 NPE / 排行异常
         if (dish.getAvgRating() == null) {
             dish.setAvgRating(0.0);
@@ -221,7 +254,13 @@ public class DishServiceImpl implements DishService {
             }
         }
         dish.setId(null); // 防止前端传 id 覆盖
-        return dishMapper.insert(dish) > 0;
+        try {
+            return dishMapper.insert(dish) > 0;
+        } catch (DuplicateKeyException e) {
+            // 唯一键 uk_dish_name_canteen 兜底：该食堂下已有同名菜品
+            log.warn("菜品重复，已拦截：{}（{}）", dish.getName(), dish.getCanteen());
+            return false;
+        }
     }
 
     @Override
@@ -230,6 +269,12 @@ public class DishServiceImpl implements DishService {
         if (dish == null || dish.getId() == null) {
             return false;
         }
+        // 改名/改食堂同样要清洗，否则会绕过唯一键
+        if (dish.getName() != null) {
+            dish.setName(dish.getName().trim());
+        }
+        // 传 null 表示本次不改食堂，交给 MyBatis-Plus 忽略该字段
+        dish.setCanteen(normalizeCanteen(dish.getCanteen()));
         // 上传了新图才替换；否则保持数据库里的原图不变
         if (imageFile != null && !imageFile.isEmpty()) {
             String imageUrl = saveImage(imageFile);
@@ -242,7 +287,13 @@ public class DishServiceImpl implements DishService {
         }
         // avgRating 由评价动态重算，不在编辑时手动改
         dish.setAvgRating(null);
-        return dishMapper.updateById(dish) > 0;
+        try {
+            return dishMapper.updateById(dish) > 0;
+        } catch (DuplicateKeyException e) {
+            // 改成的新名字在该食堂下已存在
+            log.warn("菜品重复，更新被拦截：{}（{}）", dish.getName(), dish.getCanteen());
+            return false;
+        }
     }
 
     @Override
@@ -294,8 +345,9 @@ public class DishServiceImpl implements DishService {
             wrapper.ge("avg_rating", minRating);
         }
 
-        // 按评分降序排列
-        wrapper.orderByDesc("avg_rating");
+        // 按评分降序排列；必须再加一个唯一键做兜底排序，
+        // 否则同分菜品的返回顺序不稳定，翻页时会出现「重复 + 漏项」
+        wrapper.orderByDesc("avg_rating").orderByAsc("id");
 
         // 关键：本类没有继承 ServiceImpl，不能用 this.page(...)
         // 改用 BaseMapper 自带的 selectPage，配合 PaginationInnerInterceptor 自动执行 COUNT + LIMIT

@@ -105,7 +105,7 @@
     <section class="section">
         <div class="section-head">
             <h2>全部菜品</h2>
-            <span class="sub" th:text="'共 ' + ${#lists.size(dishes)} + ' 道'">共 15 道</span>
+            <span class="sub" th:text="|共 ${dishPage != null ? dishPage.total : #lists.size(dishes)} 道|">共 15 道</span>
         </div>
 
         <!-- 搜索框 -->
@@ -124,7 +124,7 @@
 
         <!-- 搜索结果提示 -->
         <div class="search-result-tip" th:if="${searching}">
-            找到 <b th:text="${#lists.size(dishes)}">0</b> 个结果
+            找到 <b th:text="${dishPage != null ? dishPage.total : #lists.size(dishes)}">0</b> 个结果
             <span th:if="${keyword != null and !keyword.isBlank()}" th:text="'，关键词：' + ${keyword}"></span>
         </div>
 
@@ -180,14 +180,13 @@
                th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${cur - 1}, size=${dishPage.size})}">‹<span class="pg-label">上一页</span></a>
             <span th:if="${cur <= 1}" class="disabled">‹<span class="pg-label">上一页</span></span>
 
-            <!-- 页码：首尾 + 当前页附近，用省略号收拢 -->
-            <th:block th:each="p : ${#numbers.sequence(1, total)}">
-                <a th:if="${p == 1 or p == total or (p >= cur - 2 and p <= cur + 2)}"
+            <!-- 页码：首尾 + 当前页附近，省略号由后端已算好（null 代表 …） -->
+            <th:block th:each="p : ${pageNumbers}">
+                <span th:if="${p == null}" class="dots">…</span>
+                <a th:if="${p != null}"
                    th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${p}, size=${dishPage.size})}"
                    th:text="${p}"
                    th:classappend="${p == cur} ? 'active'"></a>
-                <span th:if="${p == cur - 3 and p > 1}" class="dots">…</span>
-                <span th:if="${p == cur + 3 and p < total}" class="dots">…</span>
             </th:block>
 
             <!-- 下一页 -->
@@ -195,7 +194,7 @@
                th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${cur + 1}, size=${dishPage.size})}"><span class="pg-label">下一页</span>›</a>
             <span th:if="${cur >= total}" class="disabled"><span class="pg-label">下一页</span>›</span>
 
-            <span class="page-info" th:text="'第 ' + ${cur} + ' / ' + ${total} + ' 页，共 ' + ${dishPage.total} + ' 道菜'"></span>
+            <span class="page-info" th:text="|第 ${cur} / ${total} 页，共 ${dishPage.total} 道菜|"></span>
         </div>
     </section>
 

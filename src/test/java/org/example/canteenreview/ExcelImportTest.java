@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DuplicateKeyException;
 
 @SpringBootTest
 public class ExcelImportTest {
@@ -33,16 +34,35 @@ public class ExcelImportTest {
                 @Override
                 public void invoke(Dish dish, AnalysisContext context) {
                     // 每读到一行数据，就会执行一次这里的代码
-                    // 1. 如果没有填评分，给个默认值 0.0
+                    // 1. 菜名必填，空白行直接跳过
+                    if (dish.getName() == null || dish.getName().isBlank()) {
+                        System.out.println("⏭️ 跳过空行：菜名为空");
+                        return;
+                    }
+                    dish.setName(dish.getName().trim());
+                    // 食堂名去空格：canteen 为 NOT NULL，空值统一存空串
+                    dish.setCanteen(dish.getCanteen() == null ? "" : dish.getCanteen().trim());
+
+                    // 2. 如果没有填评分，给个默认值 0.0
                     if (dish.getAvgRating() == null) {
                         dish.setAvgRating(0.0);
                     }
 
-                    // 2. 将数据插入到数据库
-                    dishMapper.insert(dish);
+                    // 3. 插入数据库：依赖唯一键 uk_dish_name_canteen 拦截同食堂同名菜
+                    try {
+                        dishMapper.insert(dish);
+                        System.out.println("✅ 成功导入：" + dish.getName() + " (" + dish.getCanteen() + ")");
+                    } catch (DuplicateKeyException e) {
+                        System.out.println("⏭️ 跳过重复：" + dish.getName() + " (" + dish.getCanteen() + ") 已存在");
+                    }
+                }
 
-                    // 3. 在控制台打印出来，让你看到进度
-                    System.out.println("✅ 成功导入：" + dish.getName() + " (" + dish.getCanteen() + ")");
+                @Override
+                public void onException(Exception exception, AnalysisContext context) {
+                    // 单行出错（比如价格填成了"12元"、菜名超长）默认会让整批读取直接停下，
+                    // 表现就是"只导入了一行"。这里改成记录后继续读下一行。
+                    System.out.println("⚠️ 第 " + (context.readRowHolder().getRowIndex() + 1)
+                            + " 行处理失败，已跳过：" + exception.getMessage());
                 }
 
                 @Override

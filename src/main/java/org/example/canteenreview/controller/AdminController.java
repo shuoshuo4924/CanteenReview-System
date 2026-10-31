@@ -44,7 +44,7 @@ public class AdminController {
                           RedirectAttributes redirectAttributes) {
         boolean success = dishService.addDish(dish, imageFile);
         redirectAttributes.addFlashAttribute(success ? "okMsg" : "errMsg",
-                success ? "✅ 菜品添加成功" : "❌ 添加失败：菜名不能为空");
+                success ? "✅ 菜品添加成功" : "❌ 添加失败：菜名不能为空，或该食堂下已存在同名菜品");
         return "redirect:/admin/dishes";
     }
 
@@ -56,7 +56,7 @@ public class AdminController {
                              RedirectAttributes redirectAttributes) {
         boolean success = dishService.updateDish(dish, imageFile);
         redirectAttributes.addFlashAttribute(success ? "okMsg" : "errMsg",
-                success ? "✅ 菜品更新成功" : "❌ 更新失败");
+                success ? "✅ 菜品更新成功" : "❌ 更新失败：该食堂下已存在同名菜品，或菜名不能为空");
         return "redirect:/admin/dishes";
     }
 

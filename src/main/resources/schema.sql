@@ -41,11 +41,15 @@ CREATE TABLE `user` (
 CREATE TABLE dish (
     id         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     name       VARCHAR(100) NOT NULL COMMENT '菜名',
-    canteen    VARCHAR(50)           DEFAULT NULL COMMENT '所属食堂',
+    -- 必须 NOT NULL：MySQL 唯一索引把 NULL 视为互不相等，canteen 为 NULL 时同名菜可以无限重复插入
+    canteen    VARCHAR(50)  NOT NULL DEFAULT '' COMMENT '所属食堂',
     avg_rating DOUBLE                DEFAULT 0 COMMENT '平均评分（冗余字段，评价后回写）',
     image_url  VARCHAR(255)          DEFAULT NULL COMMENT '菜品图片 URL',
     price      DOUBLE                DEFAULT NULL COMMENT '价格',
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    -- 业务唯一键：同一食堂下菜名不重复；不同食堂的同名菜是两条合法记录。
+    -- price 绝不能进唯一键，调价是常态，否则"改价=新增一道菜"，评价历史会被拆断
+    UNIQUE KEY uk_dish_name_canteen (name, canteen)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='菜品表';
 
