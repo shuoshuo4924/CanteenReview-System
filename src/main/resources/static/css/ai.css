@@ -1,0 +1,252 @@
+@charset "UTF-8";
+
+/* ==========================================================================
+   AI 对话面板
+   首页 Hero 右侧、建议箱卡片里共用这一套组件样式；
+   外层布局（hero-grid、卡片间距）由各页面自己的 css 负责。
+   ========================================================================== */
+
+/* ---------- 面板 ---------- */
+
+.ai-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 412px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-2);
+}
+
+/* ---------- 头部：墨色渐变 + AI 头像 ---------- */
+
+.ai-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--ink) 0%, var(--accent-deep) 100%);
+}
+
+.ai-head-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.ai-head-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+}
+
+.ai-head-text b {
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #fff;
+}
+
+.ai-head-text small {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.66);
+}
+
+.ai-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+}
+
+.ai-avatar.sm {
+    width: 24px;
+    height: 24px;
+    margin-top: 2px;
+    font-size: 9px;
+    color: var(--accent-deep);
+    background: var(--accent-wash);
+    border-color: rgba(176, 64, 28, 0.2);
+}
+
+/* ---------- 消息区 ---------- */
+
+.ai-messages {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    overflow-y: auto;
+    background: var(--paper);
+}
+
+.ai-msg-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: 100%;
+}
+
+.ai-msg-row.me { justify-content: flex-end; }
+
+.ai-msg {
+    max-width: 78%;
+    padding: 10px 13px;
+    font-size: 14px;
+    line-height: 1.65;
+    border-radius: 12px;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.ai-msg.bot {
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-top-left-radius: 4px;
+}
+
+.ai-msg.me {
+    color: #fff;
+    background: var(--ink);
+    border-top-right-radius: 4px;
+}
+
+/* 快捷问题 */
+.ai-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-left: 32px;
+}
+
+.ai-chip {
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--accent-deep);
+    background: var(--accent-wash);
+    border: 1px solid rgba(176, 64, 28, 0.18);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.18s var(--ease), color 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+
+.ai-chip:hover {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+/* 打字指示器：三个跳动的点 */
+.ai-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 15px 13px;
+}
+
+.ai-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #C9BEB2;
+    animation: aiBlink 1.2s infinite ease-in-out;
+}
+
+.ai-typing span:nth-child(2) { animation-delay: 0.18s; }
+.ai-typing span:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes aiBlink {
+    0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+    30%           { opacity: 1;    transform: translateY(-3px); }
+}
+
+/* ---------- 输入区 ---------- */
+
+.ai-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--surface);
+    border-top: 1px solid var(--line-soft);
+}
+
+/* 胶囊输入框 */
+.ai-input-row input {
+    flex: 1;
+    min-width: 0;
+    height: 42px;
+    padding: 0 14px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    transition: border-color 0.18s var(--ease), background-color 0.18s var(--ease);
+}
+
+.ai-input-row input::placeholder { color: #B4ABA2; }
+
+.ai-input-row input:focus {
+    outline: none;
+    background: var(--surface);
+    border-color: var(--ink);
+}
+
+/* 圆形发送按钮 */
+.ai-send {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    font-family: inherit;
+    font-size: 17px;
+    line-height: 1;
+    color: #fff;
+    background: var(--ink);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.ai-send:hover:not(:disabled) {
+    background: var(--accent);
+    transform: translateY(-1px);
+}
+
+.ai-send:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 900px) {
+    .ai-panel { height: 400px; }
+}
+
+@media (max-width: 640px) {
+    .ai-panel { height: 440px; }
+
+    .ai-msg { max-width: 84%; }
+
+    .ai-chips { padding-left: 0; }
+}

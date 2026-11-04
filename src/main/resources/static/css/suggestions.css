@@ -1,0 +1,174 @@
+@charset "UTF-8";
+
+/* ==========================================================================
+   建议箱（前台）：页头 / 提交表单 / 留言卡片 / 状态徽章 / 分页
+   通用组件（卡片、按钮、表单、空状态）来自 base.css，这里只补本页特有部分
+   ========================================================================== */
+
+.page-head { margin-bottom: 26px; }
+
+.page-head h1 {
+    font-size: clamp(24px, 3vw, 30px);
+    font-weight: 600;
+}
+
+.page-head p {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+/* ---------- 提交表单 ---------- */
+
+.suggest-form > .field { margin-bottom: 16px; }
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ---------- 留言卡片 ---------- */
+
+.sug-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.sug {
+    padding: 16px 18px;
+    background: #FCFAF7;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-md);
+}
+
+.sug-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.sug-head .avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+}
+
+.sug-author {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.sug-head time {
+    margin-left: auto;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.sug-type {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--accent-wash);
+    color: var(--accent-deep);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+}
+
+.sug-status {
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+
+.sug-status.pending {
+    background: #FBF3E4;
+    color: #8A6520;
+}
+
+.sug-status.done {
+    background: var(--success-wash);
+    color: var(--success);
+}
+
+.sug-content {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.sug-reply {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.sug-reply-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+}
+
+.sug-reply p {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ---------- 分页 ---------- */
+
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 24px;
+    font-size: 13px;
+}
+
+.pager a,
+.pager .disabled {
+    padding: 6px 13px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+}
+
+.pager a:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.pager .disabled {
+    color: #C7BDB1;
+    background: transparent;
+}
+
+.pager-info {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 640px) {
+    .sug-head time {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .form-actions .btn { width: 100%; }
+}

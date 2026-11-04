@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>建议箱管理 · 吃啥饭后台</title>
+
+    <!-- 设计系统：令牌、排版与通用组件 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <!-- 后台专属：表格、工具栏、折叠回复 -->
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <!-- AI 对话面板组件 -->
+    <link rel="stylesheet" th:href="@{/css/ai.css}">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <a href="/admin/dishes" class="brand">吃啥饭 · 后台</a>
+        <nav class="user-area">
+            <a href="/admin/dishes" class="back">菜品管理</a>
+            <a href="/dishes" class="back">返回前台 →</a>
+        </nav>
+    </div>
+</header>
+
+<main class="wrap">
+
+    <div class="page-head">
+        <h1>建议箱管理</h1>
+        <p>
+            还有 <b th:text="${pendingCount}">0</b> 条待处理；回复后会立刻出现在前台的「大家的声音」里
+        </p>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="notice ok" th:if="${okMsg}" th:text="${okMsg}">操作成功</div>
+    <div class="notice err" th:if="${errMsg}" th:text="${errMsg}">操作失败</div>
+
+    <!-- ================= AI 助手 ================= -->
+    <!-- 后台只有管理员能进（AdminInterceptor 已拦住 /admin/**），页面本身不用再做权限判断 -->
+    <div class="card ai-card">
+        <div class="block-head">
+            <h3>AI 助手</h3>
+            <span class="count">帮你归纳留言、起草回复</span>
+        </div>
+
+        <div class="ai-panel" id="aiPanel" data-endpoint="/ai/suggestions">
+            <header class="ai-panel-head">
+                <div class="ai-head-left">
+                    <span class="ai-avatar">AI</span>
+                    <span class="ai-head-text">
+                        <b>建议箱助手</b>
+                        <small>基于最近的留言回答</small>
+                    </span>
+                </div>
+            </header>
+
+            <div class="ai-messages" id="aiMessages">
+                <div class="ai-msg-row bot">
+                    <span class="ai-avatar sm">AI</span>
+                    <div class="ai-msg bot">我可以帮你归纳大家最近在抱怨什么，也能替某条建议起草回复。</div>
+                </div>
+
+                <div class="ai-chips" id="aiChips">
+                    <button type="button" class="ai-chip">总结一下大家的意见</button>
+                    <button type="button" class="ai-chip">哪条建议最该先处理</button>
+                </div>
+            </div>
+
+            <form class="ai-input-row" id="aiForm">
+                <input type="text" id="aiInput" maxlength="200"
+                       placeholder="比如「给待处理的建议起草一条回复」" autocomplete="off">
+                <button type="submit" id="aiSend" class="ai-send" aria-label="发送">↑</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <!-- 状态筛选：选择即生效 -->
+        <div class="filter-bar">
+            <div class="filter-item">
+                <label>处理状态</label>
+                <form action="/admin/suggestions" method="get">
+                    <select name="status" onchange="this.form.submit()">
+                        <option value="" th:selected="${status == null or status == ''}">全部</option>
+                        <option value="PENDING" th:selected="${status == 'PENDING'}">待处理</option>
+                        <option value="REPLIED" th:selected="${status == 'REPLIED'}">已回复</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                <tr>
+                    <th>类型</th>
+                    <th>内容</th>
+                    <th>提交人</th>
+                    <th>时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${suggestions}">
+                    <td><span class="sug-type" th:text="${s.typeLabel}">菜品建议</span></td>
+
+                    <td class="sug-cell">
+                        <p class="font-bold" th:text="${s.content}">建议内容</p>
+                        <div class="sug-reply-inline" th:if="${s.replied}">
+                            <span>官方回复</span>
+                            <p th:text="${s.reply}">回复内容</p>
+                        </div>
+                    </td>
+
+                    <td class="text-muted" th:text="${s.author}">小明</td>
+                    <td class="text-muted"
+                        th:text="${#temporals.format(s.createTime, 'yyyy-MM-dd HH:mm')}">2026-11-04 12:00</td>
+                    <td>
+                        <span th:class="${s.replied ? 'sug-status done' : 'sug-status pending'}"
+                              th:text="${s.replied ? '已回复' : '待处理'}">待处理</span>
+                    </td>
+
+                    <td class="col-actions">
+                        <!-- 回复（折叠表单，已回复的可以改） -->
+                        <details>
+                            <summary th:text="${s.replied ? '改回复' : '回复'}">回复</summary>
+                            <form class="edit-form" action="/admin/suggestions/reply" method="post">
+                                <input type="hidden" name="id" th:value="${s.id}">
+                                <input type="hidden" name="status" th:value="${status}">
+                                <div class="field">
+                                    <label>回复内容</label>
+                                    <textarea name="reply" rows="4" required maxlength="500"
+                                              placeholder="说明怎么处理的、什么时候能改好，让人看到进展"
+                                              th:text="${s.reply}"></textarea>
+                                </div>
+                                <div class="actions">
+                                    <button type="submit" class="btn btn-sm btn-primary">发布回复</button>
+                                </div>
+                            </form>
+                        </details>
+
+                        <!-- 删除 -->
+                        <form class="delete-form" action="/admin/suggestions/delete" method="post"
+                              onsubmit="return confirm('确定删除这条建议吗？此操作不可恢复！');">
+                            <input type="hidden" name="id" th:value="${s.id}">
+                            <input type="hidden" name="status" th:value="${status}">
+                            <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(suggestions)}">
+            <span class="icon">📮</span>
+            这里还没有建议
+        </div>
+    </div>
+
+</main>
+
+<script th:src="@{/js/ai-chat.js}"></script>
+
+</body>
+</html>
