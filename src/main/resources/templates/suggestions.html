@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>建议箱 · 吃啥饭</title>
+
+    <!-- 设计系统：令牌、排版与通用组件 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <!-- 建议箱专属：留言卡片、状态徽章、分页 -->
+    <link rel="stylesheet" th:href="@{/css/suggestions.css}">
+</head>
+<body>
+
+<!-- ================= 顶部导航 ================= -->
+<header class="topbar">
+    <div class="topbar-inner">
+        <a href="/dishes" class="brand">吃啥饭</a>
+
+        <nav class="user-area">
+            <a href="/suggestions" class="btn btn-outline">建议箱</a>
+
+            <th:block th:if="${session.loginUser != null}">
+                <div class="avatar"
+                     th:text="${#strings.isEmpty(session.loginUser.username) ? '?' : #strings.substring(session.loginUser.username, 0, 1).toUpperCase()}">A</div>
+                <span th:text="${session.loginUser.username}">同学</span>
+                <a th:if="${session.loginUser.role == 'ADMIN'}" href="/admin/suggestions"
+                   class="btn btn-primary">建议管理</a>
+                <!-- 退出必须是 POST，避免被跨站的 <img src="/logout"> 触发 -->
+                <form action="/logout" method="post" class="inline-form">
+                    <button type="submit" class="btn btn-ghost">退出</button>
+                </form>
+            </th:block>
+
+            <th:block th:if="${session.loginUser == null}">
+                <a href="/login" class="btn btn-ghost">登录</a>
+                <a href="/register" class="btn btn-primary">注册</a>
+            </th:block>
+        </nav>
+    </div>
+</header>
+
+<main class="wrap">
+
+    <div class="page-head">
+        <h1>建议箱</h1>
+        <p>菜品口味、档口排队、系统问题都可以说，管理员会一条条处理并公开回复。</p>
+    </div>
+
+    <div class="notice ok" th:if="${okMsg}" th:text="${okMsg}">提交成功</div>
+    <div class="notice err" th:if="${errorMsg}" th:text="${errorMsg}">提交失败</div>
+
+    <!-- ================= 写建议 ================= -->
+    <div class="card" id="write">
+        <div class="block-head">
+            <h3>写建议</h3>
+            <span class="count">最多 500 字</span>
+        </div>
+
+        <form action="/suggestions" method="post" class="suggest-form"
+              th:if="${session.loginUser != null}">
+            <div class="field">
+                <label for="type">建议类型</label>
+                <select id="type" name="type">
+                    <option value="DISH">菜品建议（想吃 / 想改进某道菜）</option>
+                    <option value="CANTEEN">食堂建议（卫生、排队、服务）</option>
+                    <option value="SYSTEM">系统问题（打不开、数据不对）</option>
+                    <option value="OTHER">其他</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="content">建议内容</label>
+                <textarea id="content" name="content" rows="4" required maxlength="500"
+                          placeholder="说清楚是哪道菜、哪个食堂、什么情况，管理员才好跟进"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">提交建议</button>
+            </div>
+        </form>
+
+        <div class="login-tip" th:if="${session.loginUser == null}">
+            提交建议需要登录（方便你查看处理进度），<a href="/login">点这里登录</a>
+        </div>
+    </div>
+
+    <!-- ================= 我的建议 ================= -->
+    <div class="card" th:if="${!#lists.isEmpty(mySuggestions)}">
+        <div class="block-head">
+            <h3>我的建议</h3>
+            <span class="count" th:text="|共 ${#lists.size(mySuggestions)} 条|">共 0 条</span>
+        </div>
+
+        <div class="sug-list">
+            <article class="sug" th:each="s : ${mySuggestions}">
+                <div class="sug-head">
+                    <span class="sug-type" th:text="${s.typeLabel}">菜品建议</span>
+                    <span th:class="${s.replied ? 'sug-status done' : 'sug-status pending'}"
+                          th:text="${s.replied ? '已回复' : '待处理'}">待处理</span>
+                    <time th:text="${#temporals.format(s.createTime, 'yyyy-MM-dd HH:mm')}">2026-11-04 12:00</time>
+                </div>
+
+                <p class="sug-content" th:text="${s.content}">这里有内容</p>
+
+                <div class="sug-reply" th:if="${s.reply != null and !#strings.isEmpty(s.reply)}">
+                    <span class="sug-reply-label">官方回复</span>
+                    <p th:text="${s.reply}">管理员的回复</p>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <!-- ================= 大家的声音（已回复） ================= -->
+    <div class="card">
+        <div class="block-head">
+            <h3>大家的声音</h3>
+            <span class="count" th:text="|共 ${suggestionPage.total} 条已回复|">共 0 条已回复</span>
+        </div>
+
+        <div class="sug-list">
+            <article class="sug" th:each="s : ${suggestionPage.records}">
+                <div class="sug-head">
+                    <div class="avatar"
+                         th:text="${#strings.isEmpty(s.author) ? '匿' : #strings.substring(s.author, 0, 1).toUpperCase()}">A</div>
+                    <span class="sug-author"
+                          th:text="${#strings.isEmpty(s.author) ? '匿名同学' : s.author}">小明</span>
+                    <span class="sug-type" th:text="${s.typeLabel}">菜品建议</span>
+                    <time th:text="${#temporals.format(s.replyTime != null ? s.replyTime : s.createTime, 'yyyy-MM-dd HH:mm')}">2026-11-04 12:00</time>
+                </div>
+
+                <p class="sug-content" th:text="${s.content}">这里有内容</p>
+
+                <div class="sug-reply" th:if="${s.reply != null and !#strings.isEmpty(s.reply)}">
+                    <span class="sug-reply-label">官方回复</span>
+                    <p th:text="${s.reply}">管理员的回复</p>
+                </div>
+            </article>
+
+            <div class="empty" th:if="${#lists.isEmpty(suggestionPage.records)}">
+                <span class="icon">📮</span>
+                还没有公开的回复，第一条建议可以是你写的
+            </div>
+        </div>
+
+        <div class="pager" th:if="${suggestionPage.pages > 1}">
+            <a th:if="${suggestionPage.current > 1}"
+               th:href="@{/suggestions(page=${suggestionPage.current - 1}, size=${suggestionPage.size})}">‹ 上一页</a>
+            <span th:if="${suggestionPage.current <= 1}" class="disabled">‹ 上一页</span>
+
+            <span class="pager-info"
+                  th:text="|第 ${suggestionPage.current} / ${suggestionPage.pages} 页|">第 1 / 1 页</span>
+
+            <a th:if="${suggestionPage.current < suggestionPage.pages}"
+               th:href="@{/suggestions(page=${suggestionPage.current + 1}, size=${suggestionPage.size})}">下一页 ›</a>
+            <span th:if="${suggestionPage.current >= suggestionPage.pages}" class="disabled">下一页 ›</span>
+        </div>
+    </div>
+
+</main>
+
+<footer class="footer">吃啥饭 · 校园食堂评价系统</footer>
+
+</body>
+</html>
