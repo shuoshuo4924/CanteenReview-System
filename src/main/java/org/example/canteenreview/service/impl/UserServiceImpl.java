@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.example.canteenreview.entity.User;
 import org.example.canteenreview.mapper.UserMapper;
 import org.example.canteenreview.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,8 @@ import java.util.Locale;
 @Service
 public class UserServiceImpl implements UserService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
     @Autowired
     private UserMapper userMapper;
 
@@ -26,20 +31,32 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean register(String username, String password, String securityAnswer) {
+        // 0. 兜底校验：BCrypt 不接受 null 密码，username 也有 NOT NULL 约束
+        if (username == null || username.isBlank() || password == null || password.isBlank()) {
+            return false;
+        }
+        String name = username.trim();
+
         // 1. 用户名是否已存在
-        if (existsByUsername(username)) {
+        if (existsByUsername(name)) {
             return false;
         }
 
         // 2. 组装用户（密码、密保答案都加密后入库，问题用全站统一的那个）
         User user = new User();
-        user.setUsername(username);
+        user.setUsername(name);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole("USER");
         user.setSecurityQuestion(SECURITY_QUESTION);
         user.setSecurityAnswer(passwordEncoder.encode(normalizeAnswer(securityAnswer)));
 
-        return userMapper.insert(user) > 0;
+        // 3. 并发下「先查后插」会同时通过，靠 uk_username 唯一键兜底
+        try {
+            return userMapper.insert(user) > 0;
+        } catch (DuplicateKeyException e) {
+            log.warn("用户名重复，注册被拦截：{}", name);
+            return false;
+        }
     }
 
     @Override

@@ -12,6 +12,7 @@ USE canteen_review;
 
 -- 先删从表，再删主表，避免外键/顺序问题
 DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS suggestions;
 DROP TABLE IF EXISTS dish;
 DROP TABLE IF EXISTS `user`;
 
@@ -72,3 +73,34 @@ CREATE TABLE reviews (
     KEY idx_dish_id (dish_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='评价表';
+
+-- -------------------------------------------------------------
+-- 建议箱表
+-- 说明：不建外键，用户被删也不影响历史留言（author 冗余存一份）；
+--       不收集联系方式，只留类型和内容。
+-- -------------------------------------------------------------
+CREATE TABLE suggestions (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    user_id     BIGINT       NOT NULL COMMENT '提交人 id',
+    author      VARCHAR(50)           DEFAULT NULL COMMENT '提交人显示名（冗余）',
+    type        VARCHAR(20)  NOT NULL DEFAULT 'OTHER' COMMENT '类型：DISH / CANTEEN / SYSTEM / OTHER',
+    content     VARCHAR(500) NOT NULL COMMENT '建议内容',
+    status      VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT '状态：PENDING 待处理 / REPLIED 已回复',
+    reply       VARCHAR(500)          DEFAULT NULL COMMENT '管理员回复',
+    create_time DATETIME              DEFAULT NULL COMMENT '提交时间',
+    reply_time  DATETIME              DEFAULT NULL COMMENT '回复时间',
+    PRIMARY KEY (id),
+    KEY idx_status (status),
+    KEY idx_user_id (user_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='建议箱表';
+
+-- 已有数据库不重建时，单独执行下面这条即可（不会清空数据）：
+-- CREATE TABLE IF NOT EXISTS suggestions (
+--     id BIGINT NOT NULL AUTO_INCREMENT, user_id BIGINT NOT NULL,
+--     author VARCHAR(50), type VARCHAR(20) NOT NULL DEFAULT 'OTHER',
+--     content VARCHAR(500) NOT NULL,
+--     status VARCHAR(20) NOT NULL DEFAULT 'PENDING', reply VARCHAR(500),
+--     create_time DATETIME, reply_time DATETIME,
+--     PRIMARY KEY (id), KEY idx_status (status), KEY idx_user_id (user_id)
+-- ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT ='建议箱表';

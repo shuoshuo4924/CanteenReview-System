@@ -29,3 +29,14 @@ app:
   image-dir: D:/canteen-images/
   # 浏览器访问图片时的 URL 前缀，需要和 WebConfig 里的映射一致
   image-url-prefix: /images/
+  # 是否信任反向代理传来的 X-Forwarded-For。
+  # 直连部署必须保持 false，否则客户端换个伪造的头就能绕过注册/登录/AI 的限流。
+  # 只有前面挂了 Nginx 且由它覆盖该头时，才改成 true。
+  trust-proxy: false
+
+server:
+  servlet:
+    session:
+      # 只用 Cookie 传 sessionId，禁用 URL 重写，避免 ;jsessionid= 出现在日志和 Referer 里
+      tracking-modes: cookie
+      timeout: 30m

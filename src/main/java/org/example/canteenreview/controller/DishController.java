@@ -1,35 +1,44 @@
 package org.example.canteenreview.controller;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page; // 新增导入
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.servlet.http.HttpSession;
+import org.example.canteenreview.common.RateLimiter;
 import org.example.canteenreview.entity.Dish;
 import org.example.canteenreview.entity.Review;
 import org.example.canteenreview.entity.User;
-import org.example.canteenreview.service.AiService;
 import org.example.canteenreview.service.DishService;
+import org.example.canteenreview.service.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
+/**
+ * 菜品展示控制器：首页列表 / 分页 / 详情 / 提交评价。
+ * 只做"接请求 → 调 Service → 选视图"，业务规则都在 Service 层。
+ */
 @Controller
 public class DishController {
+
+    // 与 reviews.comment 列长度保持一致，超长会在入库时抛 SQL 异常
+    private static final int MAX_COMMENT_LENGTH = 500;
 
     @Autowired
     private DishService dishService;
 
     @Autowired
-    private AiService aiService;
+    private ReviewService reviewService;
+
+    @Autowired
+    private RateLimiter rateLimiter;
 
     @GetMapping("/")
     public String index() {
@@ -87,10 +96,78 @@ public class DishController {
         return "dish-list";
     }
 
+    // 菜品详情
+    @GetMapping("/dish/detail")
+    public String showDetail(@RequestParam("id") Long id, Model model,
+                             HttpSession session, RedirectAttributes redirectAttributes) {
+        Dish dish = dishService.getDishById(id);
+        // 菜品可能被管理员删掉，地址栏里的 id 还停在旧链接上：
+        // 此处必须判空，否则模板取 dish.name 会直接抛 500
+        if (dish == null) {
+            redirectAttributes.addFlashAttribute("errorMsg", "这道菜已经不在菜单里了，去逛逛别的吧~");
+            return "redirect:/dishes";
+        }
+
+        model.addAttribute("dish", dish);
+        model.addAttribute("reviews", reviewService.getReviewsByDishId(id));
+
+        User loginUser = (User) session.getAttribute("loginUser");
+        boolean hasReviewed = loginUser != null && reviewService.hasReviewed(id, loginUser.getId());
+        model.addAttribute("hasReviewed", hasReviewed);
+
+        return "dish-detail";
+    }
+
+    // 评价提交
+    @PostMapping("/dish/review")
+    public String addReview(Review review,
+                            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+                            HttpSession session,
+                            RedirectAttributes redirectAttributes) {
+
+        User loginUser = (User) session.getAttribute("loginUser");
+        if (loginUser == null) {
+            return "redirect:/login";
+        }
+
+        // 前端校验可以被绕过（直接 POST），这里必须再挡一遍，
+        // 否则 rating 为 null / 越界会撞上数据库 NOT NULL 直接 500
+        Long dishId = review.getDishId();
+        if (dishId == null) {
+            redirectAttributes.addFlashAttribute("errorMsg", "❌ 没找到要评价的菜品，请重新进入详情页");
+            return "redirect:/dishes";
+        }
+        // 防刷：同一账号 1 分钟最多提交 10 次，挡掉连点器和脚本（换菜刷分还有唯一键兜底）
+        if (!rateLimiter.tryAcquire("review:user:" + loginUser.getId(), 10, Duration.ofMinutes(1))) {
+            redirectAttributes.addFlashAttribute("errorMsg", "❌ 评价提交太频繁了，歇一会儿再试");
+            return "redirect:/dish/detail?id=" + dishId;
+        }
+        if (review.getRating() == null || review.getRating() < 1 || review.getRating() > 5) {
+            redirectAttributes.addFlashAttribute("errorMsg", "❌ 评分要在 1~5 星之间哦");
+            return "redirect:/dish/detail?id=" + dishId;
+        }
+        if (review.getComment() != null && review.getComment().trim().length() > MAX_COMMENT_LENGTH) {
+            redirectAttributes.addFlashAttribute("errorMsg", "❌ 评价内容最多 " + MAX_COMMENT_LENGTH + " 字，精简一下再发吧");
+            return "redirect:/dish/detail?id=" + dishId;
+        }
+
+        review.setUserId(loginUser.getId());
+        review.setAuthor(loginUser.getUsername());
+
+        boolean success = reviewService.submitReview(review, imageFile);
+
+        if (!success) {
+            redirectAttributes.addFlashAttribute("errorMsg", "❌ 提交失败：菜品可能已下架，或者你已经评价过这道菜啦！");
+        }
+
+        return "redirect:/dish/detail?id=" + dishId;
+    }
+
     /**
      * 生成页码栏要显示的页码：null 代表省略号。
      * 页数 ≤ 7 时直接返回全部页码（不需要省略号）；
      * 页数更多时只保留首尾 + 当前页前后各 2 页，中间用 null 收拢。
+     * 这属于"怎么展示"的逻辑，留在 Controller。
      */
     private static List<Long> buildPageNumbers(long current, long total) {
         List<Long> numbers = new ArrayList<>();
@@ -114,141 +191,5 @@ public class DishController {
         }
         numbers.add(total);
         return numbers;
-    }
-
-    // 菜品详情
-    @GetMapping("/dish/detail")
-    public String showDetail(@RequestParam("id") Long id, Model model, HttpSession session) {
-        model.addAttribute("dish", dishService.getDishById(id));
-        model.addAttribute("reviews", dishService.getReviewsByDishId(id));
-
-        User loginUser = (User) session.getAttribute("loginUser");
-        boolean hasReviewed = loginUser != null && dishService.hasReviewed(id, loginUser.getId());
-        model.addAttribute("hasReviewed", hasReviewed);
-
-        return "dish-detail";
-    }
-
-    /**
-     * AI 一句话总结：前端 fetch 异步调用，返回纯文本，不阻塞详情页渲染。
-     * 用户点一次才生成一次，避免每次打开页面都产生 AI 费用。
-     */
-    @GetMapping("/dish/ai-summary")
-    @ResponseBody
-    public String aiSummary(@RequestParam("id") Long id) {
-        Dish dish = dishService.getDishById(id);
-        if (dish == null) {
-            return "菜品不存在";
-        }
-        String reviewsText = buildReviewText(dishService.getReviewsByDishId(id));
-        if (reviewsText.isBlank()) {
-            return "还没有人写评价，AI 也没法总结这道菜~";
-        }
-        return aiService.summarizeReviews(dish.getName(), reviewsText);
-    }
-
-    /**
-     * AI 对话框：前端每次把完整对话历史传上来（最多保留最近 10 条）。
-     * 返回 JSON：{"reply": "..."}
-     */
-    @PostMapping("/ai/chat")
-    @ResponseBody
-    public Map<String, String> chat(@RequestBody(required = false) List<Map<String, String>> messages) {
-        if (messages == null || messages.isEmpty()) {
-            return Map.of("reply", "想问点什么呢？比如「今天吃什么」");
-        }
-
-        // 只保留最近 10 条、单条最多 300 字，防止有人拼超长文本刷 token
-        List<Map<String, String>> safe = new ArrayList<>();
-        for (Map<String, String> msg : messages.subList(Math.max(0, messages.size() - 10), messages.size())) {
-            if (msg == null) {
-                continue;
-            }
-            String role = msg.get("role");
-            String content = msg.get("content");
-            if (content == null || content.isBlank()) {
-                continue;
-            }
-            if (!"user".equals(role) && !"assistant".equals(role)) {
-                continue;
-            }
-            String text = content.trim();
-            safe.add(Map.of("role", role, "content", text.length() > 300 ? text.substring(0, 300) : text));
-        }
-        if (safe.isEmpty()) {
-            return Map.of("reply", "想问点什么呢？比如「今天吃什么」");
-        }
-        return Map.of("reply", aiService.chat(safe, buildMenuPrompt()));
-    }
-
-    /**
-     * 给 AI 的菜单背景：带上当前评分最高的 10 道菜，回答才不会瞎编。
-     */
-    private String buildMenuPrompt() {
-        StringBuilder sb = new StringBuilder(
-                "你是「吃啥饭」校园食堂的 AI 点菜助手，语气轻松、像大学生平时说话，回答控制在 80 字以内。");
-        List<Dish> top = dishService.getTop10Dishes();
-        if (!top.isEmpty()) {
-            sb.append("当前评分较高的菜品有：");
-            for (Dish dish : top) {
-                sb.append(dish.getName())
-                        .append("（")
-                        .append(dish.getCanteen() == null ? "食堂未知" : dish.getCanteen())
-                        .append("，")
-                        .append(dish.getAvgRating() == null ? "暂无评分" : dish.getAvgRating() + "分")
-                        .append("，")
-                        .append(dish.getPrice() == null ? "价格未知" : dish.getPrice() + "元")
-                        .append("）；");
-            }
-            sb.append("推荐时优先从这些菜里挑。");
-        }
-        return sb.toString();
-    }
-
-    /**
-     * 把评价拼成给 AI 的文本：只取有文字内容的，最多 20 条、总长 2000 字，
-     * 防止评价太多把 token 费用和等待时间拉高。
-     */
-    private String buildReviewText(List<Review> reviews) {
-        StringBuilder sb = new StringBuilder();
-        int count = 0;
-        for (Review review : reviews) {
-            if (review.getComment() == null || review.getComment().isBlank()) {
-                continue;
-            }
-            String line = "- " + review.getRating() + " 星：" + review.getComment().trim() + "\n";
-            if (sb.length() + line.length() > 2000) {
-                break;
-            }
-            sb.append(line);
-            if (++count >= 20) {
-                break;
-            }
-        }
-        return sb.toString();
-    }
-
-    // 评价提交
-    @PostMapping("/dish/review")
-    public String addReview(Review review,
-                            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
-                            HttpSession session,
-                            RedirectAttributes redirectAttributes) {
-
-        User loginUser = (User) session.getAttribute("loginUser");
-        if (loginUser == null) {
-            return "redirect:/login";
-        }
-
-        review.setUserId(loginUser.getId());
-        review.setAuthor(loginUser.getUsername());
-
-        boolean success = dishService.submitReview(review, imageFile);
-
-        if (!success) {
-            redirectAttributes.addFlashAttribute("errorMsg", "❌ 您已经评价过这道菜啦，不能重复刷分哦！");
-        }
-
-        return "redirect:/dish/detail?id=" + review.getDishId();
     }
 }

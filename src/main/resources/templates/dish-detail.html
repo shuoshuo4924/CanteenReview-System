@@ -195,7 +195,7 @@
             aiBtn.textContent = '思考中...';
             aiText.textContent = 'AI 正在阅读同学们的评论...';
 
-            fetch('/dish/ai-summary?id=' + encodeURIComponent(dishId))
+            fetch('/ai/summary?id=' + encodeURIComponent(dishId))
                 .then(function (res) {
                     return res.text();
                 })

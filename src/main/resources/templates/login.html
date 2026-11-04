@@ -24,8 +24,7 @@
     </div>
 
     <div class="error-msg" th:if="${error}">
-        <span th:text="${error}">账号或密码错误</span>
-        <a th:if="${notRegistered}" href="/register" class="msg-link">去注册 →</a>
+        <span th:text="${error}">用户名或密码不正确</span>
     </div>
 
     <form action="/login" method="post" class="auth-form">

@@ -30,9 +30,10 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(new AdminInterceptor())
                 .addPathPatterns("/admin/**");
 
-        // 登录拦截：评价提交等需要登录的路径（示例，可按需扩展）
+        // 登录拦截：真正需要登录的是提交评价。
+        // 之前配的是 /user/**，但项目里没有任何 /user/** 接口，等于没生效。
         registry.addInterceptor(new LoginInterceptor())
-                .addPathPatterns("/user/**");
+                .addPathPatterns("/dish/review");
     }
 
     private String ensureTrailingSlash(String path) {

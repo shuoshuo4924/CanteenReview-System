@@ -26,13 +26,14 @@
     <form action="/register" method="post" class="auth-form">
         <div class="field">
             <label>用户名</label>
-            <input type="text" name="username" placeholder="给自己起个名字" required autocomplete="username"
-                   th:value="${param.username}">
+            <input type="text" name="username" placeholder="给自己起个名字" required maxlength="20"
+                   autocomplete="username" th:value="${param.username}">
         </div>
 
         <div class="field">
             <label>密码</label>
-            <input type="password" name="password" placeholder="设置一个密码" required autocomplete="new-password">
+            <input type="password" name="password" placeholder="设置一个密码（至少 6 位）" required
+                   minlength="6" maxlength="64" autocomplete="new-password">
         </div>
 
         <div class="question-box">

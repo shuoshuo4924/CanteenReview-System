@@ -9,6 +9,8 @@
     <link rel="stylesheet" th:href="@{/css/base.css}">
     <!-- 首页专属：Hero、人气榜、菜品网格 -->
     <link rel="stylesheet" th:href="@{/css/home.css}">
+    <!-- AI 对话面板组件 -->
+    <link rel="stylesheet" th:href="@{/css/ai.css}">
 </head>
 <body>
 
@@ -18,11 +20,19 @@
         <a href="/dishes" class="brand">吃啥饭</a>
 
         <nav class="user-area">
+            <!-- 管理员点「建议箱」直接进后台，普通用户进前台留言墙 -->
+            <a th:href="${session.loginUser != null and session.loginUser.role == 'ADMIN'} ? '/admin/suggestions' : '/suggestions'"
+               class="btn btn-outline">建议箱</a>
+
             <th:block th:if="${session.loginUser != null}">
-                <div class="avatar" th:text="${#strings.substring(session.loginUser.username, 0, 1).toUpperCase()}">A</div>
+                <div class="avatar"
+                     th:text="${#strings.isEmpty(session.loginUser.username) ? '?' : #strings.substring(session.loginUser.username, 0, 1).toUpperCase()}">A</div>
                 <span th:text="${session.loginUser.username}">同学</span>
                 <a th:if="${session.loginUser.role == 'ADMIN'}" href="/admin/dishes" class="btn btn-primary">管理</a>
-                <a href="/logout" class="btn btn-ghost">退出</a>
+                <!-- 退出必须是 POST：GET 退出能被一张 <img src="/logout"> 跨站触发 -->
+                <form action="/logout" method="post" class="inline-form">
+                    <button type="submit" class="btn btn-ghost">退出</button>
+                </form>
             </th:block>
 
             <th:block th:if="${session.loginUser == null}">
@@ -56,9 +66,9 @@
                 </div>
             </div>
 
-            <!-- AI 对话框：常驻在标题右侧，一进页面就能看到 -->
+            <!-- AI 对话框：常驻在标题右侧，所有访客都能用 -->
             <div class="ai-hero">
-                <div class="ai-panel" id="aiPanel">
+                <div class="ai-panel" id="aiPanel" data-endpoint="/ai/chat">
                     <header class="ai-panel-head">
                         <div class="ai-head-left">
                             <span class="ai-avatar">AI</span>
@@ -92,6 +102,10 @@
 
         </div>
     </section>
+
+    <!-- 操作结果提示（菜品已下架、评价提交失败等） -->
+    <div class="notice err" th:if="${errorMsg}" th:text="${errorMsg}">操作失败</div>
+    <div class="notice ok" th:if="${okMsg}" th:text="${okMsg}">操作成功</div>
 
     <!-- ================= 人气榜 ================= -->
     <section class="section">
@@ -165,7 +179,7 @@
         <!-- 搜索结果提示 -->
         <div class="search-result-tip" th:if="${searching}">
             找到 <b th:text="${dishPage != null ? dishPage.total : #lists.size(dishes)}">0</b> 个结果
-            <span th:if="${keyword != null and !keyword.isBlank()}" th:text="'，关键词：' + ${keyword}"></span>
+            <span th:if="${keyword != null and !keyword.isBlank()}">，关键词：<span th:text="${keyword}"></span></span>
         </div>
 
         <div class="dish-grid">
@@ -226,7 +240,7 @@
                 <a th:if="${p != null}"
                    th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${p}, size=${dishPage.size})}"
                    th:text="${p}"
-                   th:classappend="${p == cur} ? 'active'"></a>
+                   th:class="${p == cur ? 'active' : ''}"></a>
             </th:block>
 
             <!-- 下一页 -->
@@ -234,7 +248,7 @@
                th:href="@{/dishes(keyword=${keyword}, minRating=${minRating}, page=${cur + 1}, size=${dishPage.size})}"><span class="pg-label">下一页</span>›</a>
             <span th:if="${cur >= total}" class="disabled"><span class="pg-label">下一页</span>›</span>
 
-            <span class="page-info" th:text="|第 ${cur} / ${total} 页，共 ${dishPage.total} 道菜|"></span>
+            <span class="page-info" th:text="${'第 ' + cur + ' / ' + total + ' 页，共 ' + dishPage.total + ' 道菜'}"></span>
         </div>
     </section>
 
@@ -242,123 +256,8 @@
 
 <footer class="footer">吃啥饭 · 校园食堂评价系统</footer>
 
-<!-- AI 对话框已移到 Hero 右侧（常驻显示） -->
 
-<script>
-    (function () {
-        var list = document.getElementById('aiMessages');
-        var chips = document.getElementById('aiChips');
-        var form = document.getElementById('aiForm');
-        var input = document.getElementById('aiInput');
-        var sendBtn = document.getElementById('aiSend');
-        var history = [];   // 对话历史，每次请求带给后端
-
-        function toBottom() {
-            list.scrollTop = list.scrollHeight;
-        }
-
-        // role: 'bot' | 'me'
-        function bubble(role, text) {
-            var row = document.createElement('div');
-            row.className = 'ai-msg-row ' + role;
-
-            if (role === 'bot') {
-                var av = document.createElement('span');
-                av.className = 'ai-avatar sm';
-                av.textContent = 'AI';
-                row.appendChild(av);
-            }
-
-            var msg = document.createElement('div');
-            msg.className = 'ai-msg ' + role;
-            msg.textContent = text;   // 用 textContent，AI 回复里的 HTML 不会被执行
-            row.appendChild(msg);
-
-            list.appendChild(row);
-            toBottom();
-            return row;
-        }
-
-        // 三个跳动的点，等待回复时显示
-        function typing() {
-            var row = document.createElement('div');
-            row.className = 'ai-msg-row bot';
-
-            var av = document.createElement('span');
-            av.className = 'ai-avatar sm';
-            av.textContent = 'AI';
-
-            var box = document.createElement('div');
-            box.className = 'ai-msg bot ai-typing';
-            box.innerHTML = '<span></span><span></span><span></span>';
-
-            row.appendChild(av);
-            row.appendChild(box);
-            list.appendChild(row);
-            toBottom();
-            return row;
-        }
-
-        function send(text) {
-            text = (text || '').trim();
-            if (!text || sendBtn.disabled) {
-                return;
-            }
-
-            // 第一次发消息后收起快捷问题
-            if (chips && chips.parentNode) {
-                chips.parentNode.removeChild(chips);
-            }
-
-            bubble('me', text);
-            history.push({ role: 'user', content: text });
-            input.value = '';
-            sendBtn.disabled = true;
-
-            var waiting = typing();
-
-            fetch('/ai/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(history)
-            })
-                .then(function (res) {
-                    return res.json();
-                })
-                .then(function (data) {
-                    if (waiting.parentNode) {
-                        waiting.parentNode.removeChild(waiting);
-                    }
-                    var reply = (data && data.reply) ? data.reply : '我没听清，再说一次？';
-                    bubble('bot', reply);
-                    history.push({ role: 'assistant', content: reply });
-                })
-                .catch(function () {
-                    if (waiting.parentNode) {
-                        waiting.parentNode.removeChild(waiting);
-                    }
-                    bubble('bot', '网络开小差了，稍后再试一次吧');
-                })
-                .finally(function () {
-                    sendBtn.disabled = false;
-                });
-        }
-
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            send(input.value);
-        });
-
-        if (chips) {
-            chips.addEventListener('click', function (e) {
-                var chip = e.target.closest('.ai-chip');
-                if (chip) {
-                    send(chip.textContent);
-                }
-            });
-        }
-    })();
-</script>
+<script th:src="@{/js/ai-chat.js}"></script>
 
 </body>
 </html>

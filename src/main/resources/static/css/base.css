@@ -212,7 +212,16 @@ summary:focus-visible {
     border-color: var(--accent);
     color: #fff;
 }
-
+.btn-outline {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1.5px solid var(--line);
+}
+.btn-outline:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-wash);
+}
 .btn-primary:hover {
     background: var(--accent-deep);
     border-color: var(--accent-deep);
@@ -253,6 +262,12 @@ summary:focus-visible {
     width: 100%;
     height: 46px;
     font-size: 15px;
+}
+
+/* 把 form 塞进导航栏 / 行内时，不破坏父级 flex 布局（如「退出」按钮） */
+.inline-form {
+    display: inline-flex;
+    margin: 0;
 }
 
 /* ---------- 表单控件 ---------- */
