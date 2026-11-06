@@ -45,7 +45,7 @@ public class DishController {
         return "redirect:/dishes";
     }
 
-    // 首页：融合了 搜索 + 分页
+    // 首页：融合了 搜索 + 分
     @GetMapping("/dishes")
     public String showHomePage(
             @RequestParam(value = "keyword", required = false) String keyword,
