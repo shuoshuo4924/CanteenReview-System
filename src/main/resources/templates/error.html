@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出错了 · 吃啥饭</title>
+
+    <!-- 复用站点设计系统，避免错误页和正常页面风格割裂 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+</head>
+<body>
+
+<main class="shell">
+    <section class="card" style="max-width:560px;margin:12vh auto;text-align:center;">
+
+        <div style="font-family:var(--font-serif);font-size:64px;line-height:1;color:var(--accent);"
+             th:text="${status} ?: 500">500</div>
+
+        <!-- message 由 GlobalExceptionHandler 提供；走 Spring 自带错误页时用 error 兜底 -->
+        <h1 style="margin:18px 0 10px;font-size:20px;"
+            th:text="${#strings.isEmpty(message) ? (#strings.isEmpty(error) ? '服务器开了点小差' : error) : message}">
+            服务器开了点小差
+        </h1>
+
+        <p style="color:var(--muted);font-size:14px;">换个时间再试，或者先回首页看看今天吃啥。</p>
+
+        <p th:if="${path != null}" th:text="|出错地址：${path}|"
+           style="color:var(--muted);font-size:12px;word-break:break-all;"></p>
+
+        <a href="/dishes" class="btn btn-primary" style="margin-top:12px;">回首页</a>
+    </section>
+</main>
+
+<footer class="footer">吃啥饭 · 校园食堂评价系统</footer>
+
+</body>
+</html>
