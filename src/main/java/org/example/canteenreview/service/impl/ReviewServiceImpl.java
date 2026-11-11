@@ -1,6 +1,7 @@
 package org.example.canteenreview.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.canteenreview.entity.Dish;
 import org.example.canteenreview.entity.Review;
 import org.example.canteenreview.mapper.DishMapper;
@@ -29,6 +30,9 @@ public class ReviewServiceImpl implements ReviewService {
 
     // 与 reviews.comment 列（VARCHAR(500)）保持一致
     private static final int MAX_COMMENT_LENGTH = 500;
+
+    // 菜品详情页一次最多展示多少条评价（不分页，但要防止整页被拖垮）
+    private static final int MAX_REVIEWS_PER_DISH = 200;
 
     @Autowired
     private ReviewMapper reviewMapper;
@@ -99,7 +103,9 @@ public class ReviewServiceImpl implements ReviewService {
         }
         QueryWrapper<Review> wrapper = new QueryWrapper<>();
         wrapper.eq("dish_id", dishId).orderByDesc("create_time");
-        return reviewMapper.selectList(wrapper);
+        // 详情页暂不分页，但必须有上限：否则单道菜评价上万条时，一次请求会把整页拖垮
+        Page<Review> page = new Page<>(1, MAX_REVIEWS_PER_DISH, false);
+        return reviewMapper.selectPage(page, wrapper).getRecords();
     }
 
     @Override

@@ -151,6 +151,12 @@ public class DishController {
             return "redirect:/dish/detail?id=" + dishId;
         }
 
+        // 表单绑定会把同名参数一并塞进实体：主键和晒图地址必须由服务端决定。
+        // 不清的话，直接 POST 就能指定评价 id、或塞入任意外链图片地址（存储型问题）。
+        review.setId(null);
+        review.setImageUrl(null);
+        review.setCreateTime(null);
+
         review.setUserId(loginUser.getId());
         review.setAuthor(loginUser.getUsername());
 

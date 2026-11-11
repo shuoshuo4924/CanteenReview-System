@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -42,6 +44,13 @@ public class FileStorageService {
         String extension = extractExtension(imageFile.getOriginalFilename());
         if (extension == null || !ALLOWED_EXTENSIONS.contains(extension)) {
             log.warn("拒绝上传非图片文件：{}", imageFile.getOriginalFilename());
+            return null;
+        }
+        // 只查扩展名不够：把 .html/.svg 甚至可执行文件改名成 .jpg 就能绕过。
+        // 这里再核对文件头（魔数），并要求与扩展名一致。
+        if (!hasImageSignature(imageFile, extension)) {
+            log.warn("拒绝上传：文件内容与扩展名 {} 不符，可能被改过名：{}",
+                    extension, imageFile.getOriginalFilename());
             return null;
         }
         try {
@@ -104,6 +113,37 @@ public class FileStorageService {
             return null;
         }
         return fileName;
+    }
+
+    /**
+     * 校验文件头是否真的是图片，且与扩展名对得上。
+     * 只读前 12 字节，对内存和性能都没有压力。
+     */
+    private boolean hasImageSignature(MultipartFile file, String extension) {
+        try (InputStream in = file.getInputStream()) {
+            byte[] head = in.readNBytes(12);
+            if (head.length < 12) {
+                return false;
+            }
+            switch (extension) {
+                case "jpg":
+                case "jpeg":
+                    return (head[0] & 0xFF) == 0xFF && (head[1] & 0xFF) == 0xD8 && (head[2] & 0xFF) == 0xFF;
+                case "png":
+                    return (head[0] & 0xFF) == 0x89 && head[1] == 'P' && head[2] == 'N' && head[3] == 'G';
+                case "gif":
+                    return head[0] == 'G' && head[1] == 'I' && head[2] == 'F' && head[3] == '8';
+                case "webp":
+                    // RIFF....WEBP
+                    return head[0] == 'R' && head[1] == 'I' && head[2] == 'F' && head[3] == 'F'
+                            && head[8] == 'W' && head[9] == 'E' && head[10] == 'B' && head[11] == 'P';
+                default:
+                    return false;
+            }
+        } catch (IOException e) {
+            log.warn("读取上传文件头失败", e);
+            return false;
+        }
     }
 
     /**

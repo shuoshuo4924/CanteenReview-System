@@ -23,6 +23,9 @@ public class SuggestionServiceImpl implements SuggestionService {
 
     private static final Logger log = LoggerFactory.getLogger(SuggestionServiceImpl.class);
 
+    // 后台建议列表一次最多返回多少条
+    private static final int MAX_ADMIN_LIST_SIZE = 200;
+
     @Autowired
     private SuggestionMapper suggestionMapper;
 
@@ -91,7 +94,9 @@ public class SuggestionServiceImpl implements SuggestionService {
         }
         // 待处理的排前面（布尔排序：PENDING = 1），同状态内按提交时间倒序
         wrapper.last("ORDER BY (status = '" + STATUS_PENDING + "') DESC, create_time DESC, id DESC");
-        return suggestionMapper.selectList(wrapper);
+        // 后台列表也要有上限：留言积累多了，一次全量返回会把页面和管理员都拖慢
+        Page<Suggestion> page = new Page<>(1, MAX_ADMIN_LIST_SIZE, false);
+        return suggestionMapper.selectPage(page, wrapper).getRecords();
     }
 
     @Override

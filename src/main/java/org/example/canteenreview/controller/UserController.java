@@ -27,20 +27,30 @@ public class UserController {
     @Autowired
     private RateLimiter rateLimiter;
 
+    /** 同一账号连续答错几次密保就临时锁住 */
+    private static final int MAX_ANSWER_FAILS = 5;
+
+    /** 锁定时长：到期自动解锁，不需要人工干预 */
+    private static final Duration ANSWER_LOCK = Duration.ofMinutes(10);
+
+    /** 找回密码两个步骤的 IP 限流参数（挡批量枚举用户名 / 批量试答案） */
+    private static final int FORGOT_IP_LIMIT = 10;
+    private static final Duration FORGOT_IP_WINDOW = Duration.ofMinutes(10);
+
     // ================== 1. 注册 ==================
 
     @GetMapping("/register")
     public String showRegisterPage(Model model) {
-        // 密保问题是全站统一的，注册页只做展示
-        model.addAttribute("securityQuestion", UserService.SECURITY_QUESTION);
+        // 密保问题由用户自选，页面渲染成下拉框
+        model.addAttribute("securityQuestions", UserService.SECURITY_QUESTIONS);
         return "register";
     }
 
     @PostMapping("/register")
-    public String register(String username, String password, String securityAnswer,
+    public String register(String username, String password, String securityQuestion, String securityAnswer,
                            Model model, HttpServletRequest request) {
-        // 出错回显页面时也要带上问题文本
-        model.addAttribute("securityQuestion", UserService.SECURITY_QUESTION);
+        // 出错回显页面时要把下拉框重新渲染出来
+        model.addAttribute("securityQuestions", UserService.SECURITY_QUESTIONS);
 
         // 防刷：同一 IP 10 分钟最多注册 5 次，挡掉批量注册小号
         if (!rateLimiter.tryAcquire("register:ip:" + rateLimiter.clientIp(request), 5, Duration.ofMinutes(10))) {
@@ -73,7 +83,7 @@ public class UserController {
             model.addAttribute("error", "密保答案不能为空哦！");
             return "register";
         }
-        if (!userService.register(name, password, securityAnswer)) {
+        if (!userService.register(name, password, securityQuestion, securityAnswer)) {
             model.addAttribute("error", "用户名已被注册，换一个吧！");
             return "register";
         }
@@ -96,6 +106,12 @@ public class UserController {
         // 防刷：同一 IP 10 分钟最多尝试 20 次，挡掉简单的密码爆破
         if (!rateLimiter.tryAcquire("login:ip:" + rateLimiter.clientIp(request), 20, Duration.ofMinutes(10))) {
             model.addAttribute("error", "登录尝试过于频繁，休息 10 分钟再试");
+            return "login";
+        }
+
+        // 直接 POST 可以不带字段：password 为 null 时 BCrypt 的 matches 会抛异常 → 500
+        if (isBlank(username) || isBlank(password)) {
+            model.addAttribute("error", "用户名和密码都要填哦");
             return "login";
         }
 
@@ -134,16 +150,25 @@ public class UserController {
 
     // 第一步提交：校验用户名，查出密保问题后进入第二步
     @PostMapping("/forgot")
-    public String findQuestion(String username, Model model) {
-        User user = userService.findByUsername(username);
-
-        if (user == null) {
-            model.addAttribute("error", "该用户名不存在，请检查后重试");
+    public String findQuestion(String username, Model model, HttpServletRequest request) {
+        // 挡用户名枚举：同一 IP 10 分钟最多探测 10 个用户名
+        if (!rateLimiter.tryAcquire("forgot:ip:" + rateLimiter.clientIp(request),
+                FORGOT_IP_LIMIT, FORGOT_IP_WINDOW)) {
+            model.addAttribute("error", "尝试次数太多了，请 10 分钟后再试");
             return "forgot";
         }
-        // 注意：findByUsername 已经把密保答案清空，这里只能靠"问题是否为空"判断
-        if (isBlank(user.getSecurityQuestion())) {
-            model.addAttribute("error", "该账号还没有设置密保问题，无法自助重置，请联系管理员");
+
+        if (isBlank(username)) {
+            model.addAttribute("error", "请先填写用户名");
+            return "forgot";
+        }
+
+        User user = userService.findByUsername(username);
+
+        // 统一话术：不区分"用户名不存在"和"没设置密保"。
+        // 分开提示等于免费提供一个用户名探测器，配合社工就能筛出真实账号。
+        if (user == null || isBlank(user.getSecurityQuestion())) {
+            model.addAttribute("error", "无法通过密保自助重置：账号不存在或未设置密保，请联系管理员处理");
             return "forgot";
         }
 
@@ -156,7 +181,15 @@ public class UserController {
     // 第二步提交：校验密保答案并重置密码
     @PostMapping("/forgot/reset")
     public String resetPassword(String username, String answer,
-                                String newPassword, String confirmPassword, Model model) {
+                                String newPassword, String confirmPassword,
+                                Model model, HttpServletRequest request) {
+        // 防爆破第一层：同一 IP 10 分钟最多 10 次尝试
+        if (!rateLimiter.tryAcquire("forgot:reset:ip:" + rateLimiter.clientIp(request),
+                FORGOT_IP_LIMIT, FORGOT_IP_WINDOW)) {
+            model.addAttribute("error", "尝试次数太多了，请 10 分钟后再试");
+            return "forgot";
+        }
+
         User user = userService.findByUsername(username);
 
         // 无论校验是否通过，第二步页面都需要问题文本，先回填
@@ -166,6 +199,15 @@ public class UserController {
         }
         model.addAttribute("username", user.getUsername());
         model.addAttribute("question", user.getSecurityQuestion());
+
+        // 防爆破第二层：同一账号连续答错 5 次锁 10 分钟。
+        // 全站密保问题是固定的，答案空间有限，不锁住就能像字典一样一路试下去。
+        String failKey = "forgot:reset:user:" + user.getUsername();
+        if (!rateLimiter.isAllowed(failKey, MAX_ANSWER_FAILS, ANSWER_LOCK)) {
+            long wait = Math.max(rateLimiter.retryAfterSeconds(failKey, ANSWER_LOCK), 1);
+            model.addAttribute("error", "密保答案错误次数过多，请 " + wait + " 秒后再试");
+            return "forgot";
+        }
 
         if (isBlank(answer)) {
             model.addAttribute("error", "请填写密保答案");
@@ -180,9 +222,14 @@ public class UserController {
             return "forgot";
         }
         if (!userService.resetPassword(user.getUsername(), answer, newPassword)) {
-            model.addAttribute("error", "密保答案不正确，再想想？");
+            // 只把"答错"记进失败计数；密码长度/两次不一致属于手误，不占用额度
+            rateLimiter.record(failKey);
+            model.addAttribute("error", "密保答案不正确，再想想？（连错 " + MAX_ANSWER_FAILS + " 次会锁定 10 分钟）");
             return "forgot";
         }
+
+        // 重置成功：清空该账号的失败记录，避免前面几次手误把用户连带锁住
+        rateLimiter.reset(failKey);
         return "redirect:/login?reset=1";
     }
 

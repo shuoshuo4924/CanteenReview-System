@@ -50,7 +50,10 @@ CREATE TABLE dish (
     PRIMARY KEY (id),
     -- 业务唯一键：同一食堂下菜名不重复；不同食堂的同名菜是两条合法记录。
     -- price 绝不能进唯一键，调价是常态，否则"改价=新增一道菜"，评价历史会被拆断
-    UNIQUE KEY uk_dish_name_canteen (name, canteen)
+    UNIQUE KEY uk_dish_name_canteen (name, canteen),
+    -- 首页人气榜、评分筛选、后台分档统计都按 avg_rating 排序/过滤，没索引会走 filesort。
+    -- 已经建过库的话需要手动补：ALTER TABLE `dish` ADD KEY idx_avg_rating (avg_rating);
+    KEY idx_avg_rating (avg_rating)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='菜品表';
 

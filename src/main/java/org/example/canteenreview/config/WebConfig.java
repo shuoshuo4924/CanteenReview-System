@@ -2,6 +2,8 @@ package org.example.canteenreview.config;
 
 import org.example.canteenreview.interceptor.AdminInterceptor;
 import org.example.canteenreview.interceptor.LoginInterceptor;
+import org.example.canteenreview.interceptor.OriginCheckInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -15,6 +17,16 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.image-dir}")
     private String imageDir;
 
+    // 拦截器改成 Spring Bean：它们需要查数据库（校验账号是否还存在、角色是否被改）
+    @Autowired
+    private OriginCheckInterceptor originCheckInterceptor;
+
+    @Autowired
+    private AdminInterceptor adminInterceptor;
+
+    @Autowired
+    private LoginInterceptor loginInterceptor;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 意思是：只要浏览器访问 /images/**，就去配置的文件夹里找
@@ -26,13 +38,17 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 管理员拦截：/admin/** 需要登录且角色为 ADMIN
-        registry.addInterceptor(new AdminInterceptor())
+        // 跨站写操作防护：所有 POST 请求校验 Origin/Referer 是否同源，放在最前面
+        registry.addInterceptor(originCheckInterceptor)
+                .addPathPatterns("/**");
+
+        // 管理员拦截：/admin/** 需要登录且角色为 ADMIN（角色以数据库为准）
+        registry.addInterceptor(adminInterceptor)
                 .addPathPatterns("/admin/**");
 
         // 登录拦截：真正需要登录的是提交评价。
         // 之前配的是 /user/**，但项目里没有任何 /user/** 接口，等于没生效。
-        registry.addInterceptor(new LoginInterceptor())
+        registry.addInterceptor(loginInterceptor)
                 .addPathPatterns("/dish/review");
     }
 

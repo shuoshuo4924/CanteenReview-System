@@ -30,7 +30,7 @@ public class UserServiceImpl implements UserService {
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
-    public boolean register(String username, String password, String securityAnswer) {
+    public boolean register(String username, String password, String securityQuestion, String securityAnswer) {
         // 0. 兜底校验：BCrypt 不接受 null 密码，username 也有 NOT NULL 约束
         if (username == null || username.isBlank() || password == null || password.isBlank()) {
             return false;
@@ -42,12 +42,15 @@ public class UserServiceImpl implements UserService {
             return false;
         }
 
-        // 2. 组装用户（密码、密保答案都加密后入库，问题用全站统一的那个）
+        // 2. 组装用户（密码、密保答案都加密后入库）
+        //    问题只认预设白名单：前端可以绕过下拉框直接 POST 任意文本
+        String question = SECURITY_QUESTIONS.contains(securityQuestion) ? securityQuestion : SECURITY_QUESTION;
+
         User user = new User();
         user.setUsername(name);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole("USER");
-        user.setSecurityQuestion(SECURITY_QUESTION);
+        user.setSecurityQuestion(question);
         user.setSecurityAnswer(passwordEncoder.encode(normalizeAnswer(securityAnswer)));
 
         // 3. 并发下「先查后插」会同时通过，靠 uk_username 唯一键兜底

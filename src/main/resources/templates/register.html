@@ -36,17 +36,25 @@
                    minlength="6" maxlength="64" autocomplete="new-password">
         </div>
 
-        <div class="question-box">
-            <span class="q-label">密保问题</span>
-            <p th:text="${securityQuestion}">你小学时最好的朋友叫什么名字？</p>
+        <div class="field">
+            <label>密保问题</label>
+            <select name="securityQuestion" required>
+                <option th:each="q : ${securityQuestions}"
+                        th:value="${q}"
+                        th:text="${q}"
+                        th:selected="${param.securityQuestion != null and param.securityQuestion[0] == q}">
+                    你小学时最好的朋友叫什么名字？
+                </option>
+            </select>
         </div>
 
         <div class="field">
             <label>密保答案</label>
-            <input type="text" name="securityAnswer" placeholder="填写上面的答案" required autocomplete="off">
+            <input type="text" name="securityAnswer" placeholder="填写上面问题的答案" required autocomplete="off"
+                   th:value="${param.securityAnswer}">
         </div>
 
-        <p class="form-hint">忘记密码时用它验证身份，答案不区分大小写；请填一个不会变、别人也猜不到的名字。</p>
+        <p class="form-hint">忘记密码时用它验证身份，答案不区分大小写；选一个答案不会变、别人也猜不到的问题。</p>
 
         <button type="submit" class="btn btn-primary btn-block">注册</button>
     </form>

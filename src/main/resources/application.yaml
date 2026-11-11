@@ -4,6 +4,12 @@ spring:
   thymeleaf:
     cache: false
 
+  # 启动 banner / 日志的 ANSI 颜色。默认 detect 在 IDEA 控制台里常判定为不支持，
+  # 导致 banner.txt 里的 ${AnsiColor.XXX} 被替换成空串（不报错、也不变色）。
+  output:
+    ansi:
+      enabled: always
+
   datasource:
     url: jdbc:mysql://localhost:3307/canteen_review?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
     username: root
@@ -40,3 +46,10 @@ server:
       # 只用 Cookie 传 sessionId，禁用 URL 重写，避免 ;jsessionid= 出现在日志和 Referer 里
       tracking-modes: cookie
       timeout: 30m
+      cookie:
+        # 跨站请求不带 cookie：配合 OriginCheckInterceptor 构成双重 CSRF 防护
+        same-site: lax
+        http-only: true
+        # 上线走 HTTPS 时把环境变量 COOKIE_SECURE 设为 true（cookie 只走加密连接）。
+        # 本地是 http，保持 false，否则浏览器不会回传 cookie，登录会"成功但立刻掉线"。
+        secure: ${COOKIE_SECURE:false}

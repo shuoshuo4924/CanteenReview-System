@@ -87,6 +87,15 @@ public class RateLimiter {
     }
 
     /**
+     * 清空某个 key 的全部记录。
+     * 典型场景：连续答错若干次后锁定，一旦校验成功就把失败计数归零，
+     * 避免用户明明已经答对、却被前面几次失败连带锁住。
+     */
+    public void reset(String key) {
+        windows.remove(key);
+    }
+
+    /**
      * 被限流时还要等多少秒才能再试，用于给出更具体的提示。
      * 没被限流返回 0。
      */

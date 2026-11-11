@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +45,24 @@ public class AiController {
 
     /** 单 IP / 单账号每分钟最多问几次 */
     private static final int CHAT_LIMIT_PER_MINUTE = 20;
+
+    /**
+     * 全站每天最多调用多少次 AI。
+     * 按 IP 限流管不住"换 IP 刷"和"多人共用一个出口"，
+     * 这里再加一道总闸，防止某天账单突然失控。
+     */
+    private static final int DAILY_TOTAL_LIMIT = 2000;
+    private static final String DAILY_TOTAL_KEY_PREFIX = "ai:global:daily:";
+    private static final String DAILY_TOTAL_EXCEEDED = "今天的 AI 额度已经用完了，明天再来吧~";
+
+    /**
+     * 用日期做 key，额度才是「自然日」重置。
+     * 若只用一个固定 key + 1 天窗口，那是滚动 24 小时：
+     * 凌晨 1 点用完要等到第二天 1 点，和"明天再来"的提示对不上。
+     */
+    private static String dailyTotalKey() {
+        return DAILY_TOTAL_KEY_PREFIX + LocalDate.now();
+    }
 
     @Autowired
     private AiService aiService;
@@ -70,6 +89,9 @@ public class AiController {
                 SUMMARY_LIMIT_PER_MINUTE, Duration.ofMinutes(1))) {
             return "点得有点快啦，一分钟后再试试~";
         }
+        if (!rateLimiter.tryAcquire(dailyTotalKey(), DAILY_TOTAL_LIMIT, Duration.ofDays(1))) {
+            return DAILY_TOTAL_EXCEEDED;
+        }
 
         Dish dish = dishService.getDishById(id);
         if (dish == null) {
@@ -90,6 +112,9 @@ public class AiController {
         if (!rateLimiter.tryAcquire("ai:chat:ip:" + rateLimiter.clientIp(request),
                 CHAT_LIMIT_PER_MINUTE, Duration.ofMinutes(1))) {
             return Map.of("reply", "问得太快啦，歇一分钟再聊~");
+        }
+        if (!rateLimiter.tryAcquire(dailyTotalKey(), DAILY_TOTAL_LIMIT, Duration.ofDays(1))) {
+            return Map.of("reply", DAILY_TOTAL_EXCEEDED);
         }
         return Map.of("reply", aiService.chat(messages));
     }
@@ -113,6 +138,10 @@ public class AiController {
                 CHAT_LIMIT_PER_MINUTE, Duration.ofMinutes(1))) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("reply", "问得太快啦，歇一分钟再聊~"));
+        }
+        if (!rateLimiter.tryAcquire(dailyTotalKey(), DAILY_TOTAL_LIMIT, Duration.ofDays(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("reply", DAILY_TOTAL_EXCEEDED));
         }
 
         List<Suggestion> suggestions = suggestionService.listForAdmin(null);
