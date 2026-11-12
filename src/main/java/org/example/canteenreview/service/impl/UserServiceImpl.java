@@ -43,8 +43,11 @@ public class UserServiceImpl implements UserService {
         }
 
         // 2. 组装用户（密码、密保答案都加密后入库）
-        //    问题只认预设白名单：前端可以绕过下拉框直接 POST 任意文本
-        String question = SECURITY_QUESTIONS.contains(securityQuestion) ? securityQuestion : SECURITY_QUESTION;
+        //    问题只认预设白名单：前端可以绕过下拉框直接 POST 任意文本。
+        //    注意先判 null：List.of() 是不可变集合，contains(null) 会抛 NPE
+        String question = securityQuestion == null ? SECURITY_QUESTION
+                : (SECURITY_QUESTIONS.contains(securityQuestion.trim())
+                        ? securityQuestion.trim() : SECURITY_QUESTION);
 
         User user = new User();
         user.setUsername(name);
@@ -82,6 +85,20 @@ public class UserServiceImpl implements UserService {
             return null;
         }
         // 对外只暴露必要信息，密文一律清掉
+        user.setPassword(null);
+        user.setSecurityAnswer(null);
+        return user;
+    }
+
+    @Override
+    public User findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        User user = userMapper.selectById(id);
+        if (user == null) {
+            return null;
+        }
         user.setPassword(null);
         user.setSecurityAnswer(null);
         return user;

@@ -100,6 +100,56 @@ public class DishServiceImpl implements DishService {
         return dishMapper.selectList(wrapper);
     }
 
+    /** health_tip 列长度，超长直接截断，避免入库报错 */
+    private static final int MAX_HEALTH_TIP_LENGTH = 200;
+
+    /** 单批 AI 生成最多处理几道菜：每次调用要等模型返回，太大了会顶到请求超时 */
+    private static final int MAX_AI_BATCH_SIZE = 5;
+
+    /**
+     * 健康建议：去首尾空白、超长截断。
+     * 传 null 表示"本次不修改"（MyBatis-Plus 非空更新策略会忽略该字段）；
+     * 传空串表示"显式清空"，会真正写进库，详情页再按空串判断不展示。
+     */
+    private void normalizeHealthTip(Dish dish) {
+        String tip = dish.getHealthTip();
+        if (tip == null) {
+            return;
+        }
+        tip = tip.trim();
+        if (tip.length() > MAX_HEALTH_TIP_LENGTH) {
+            tip = tip.substring(0, MAX_HEALTH_TIP_LENGTH);
+        }
+        dish.setHealthTip(tip);
+    }
+
+    @Override
+    public List<Dish> listDishesWithoutHealthTip(int limit) {
+        int size = Math.max(1, Math.min(limit, MAX_AI_BATCH_SIZE));
+        QueryWrapper<Dish> wrapper = new QueryWrapper<>();
+        wrapper.and(w -> w.isNull("health_tip").or().eq("health_tip", ""))
+                .orderByAsc("id");
+        return dishMapper.selectPage(new Page<>(1, size, false), wrapper).getRecords();
+    }
+
+    @Override
+    public long countDishesWithoutHealthTip() {
+        QueryWrapper<Dish> wrapper = new QueryWrapper<>();
+        wrapper.and(w -> w.isNull("health_tip").or().eq("health_tip", ""));
+        return dishMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public boolean updateHealthTip(Long dishId, String healthTip) {
+        if (dishId == null || healthTip == null || healthTip.isBlank()) {
+            return false;
+        }
+        Dish update = new Dish();
+        update.setId(dishId);
+        update.setHealthTip(healthTip);
+        return dishMapper.updateById(update) > 0;
+    }
+
     // ===== 管理员功能 =====
 
     @Override
@@ -112,6 +162,7 @@ public class DishServiceImpl implements DishService {
         dish.setName(dish.getName().trim());
         String canteen = normalizeCanteen(dish.getCanteen());
         dish.setCanteen(canteen == null ? "" : canteen); // canteen 列为 NOT NULL
+        normalizeHealthTip(dish);
         // 新增菜品默认 0 分，避免前端没填导致 NPE / 排行异常
         if (dish.getAvgRating() == null) {
             dish.setAvgRating(0.0);
@@ -153,6 +204,7 @@ public class DishServiceImpl implements DishService {
         }
         // 传 null 表示本次不改食堂，交给 MyBatis-Plus 忽略该字段
         dish.setCanteen(normalizeCanteen(dish.getCanteen()));
+        normalizeHealthTip(dish);
 
         // 上传了新图才替换；否则保持数据库里的原图不变
         String imageUrl = fileStorageService.saveImage(imageFile);

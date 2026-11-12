@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 页面里的 fetch 提交要带这个 token，服务端 CsrfInterceptor 会校验 -->
+    <meta name="_csrf" th:content="${session.csrfToken}">
     <title>菜品管理 · 吃啥饭后台</title>
 
     <!-- 设计系统：令牌、排版与通用组件 -->
@@ -16,6 +18,7 @@
     <div class="topbar-inner">
         <a href="/dishes" class="brand">吃啥饭 · 后台</a>
         <nav class="user-area">
+            <a href="/admin/reviews" class="back">评论审核</a>
             <a href="/admin/suggestions" class="back">建议管理</a>
             <a href="/dishes" class="back">返回前台 →</a>
         </nav>
@@ -37,6 +40,7 @@
     <div class="card">
         <h3 class="card-title">新增菜品</h3>
         <form action="/admin/dish/add" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
             <div class="form-grid">
                 <div class="field">
                     <label>菜名 *</label>
@@ -49,6 +53,11 @@
                 <div class="field">
                     <label>价格</label>
                     <input type="number" name="price" step="0.1" min="0" placeholder="如：12">
+                </div>
+                <div class="field">
+                    <label>健康建议</label>
+                    <input type="text" name="healthTip" maxlength="200"
+                           placeholder="如：蛋白质充足，搭配青菜更均衡">
                 </div>
                 <div class="field">
                     <label>图片</label>
@@ -66,7 +75,14 @@
 
     <!-- 菜品列表 -->
     <div class="card">
-        <h3 class="card-title">全部菜品（<span th:text="${#lists.size(dishes)}">0</span>）</h3>
+        <!-- AI 批量生成：分批处理，前端循环调用直到没有剩余 -->
+        <div class="card-head">
+            <h3 class="card-title">全部菜品（<span th:text="${#lists.size(dishes)}">0</span>）</h3>
+            <div class="ai-batch">
+                <span id="aiBatchTip" class="ai-batch-tip">只补还没有建议的菜品，每批 3 道</span>
+                <button type="button" class="btn btn-outline btn-sm" id="aiBatchBtn">AI 批量生成建议</button>
+            </div>
+        </div>
 
         <!-- 筛选 / 排序工具栏：选择即生效 -->
         <div class="filter-bar">
@@ -128,6 +144,7 @@
                         <details>
                             <summary>编辑</summary>
                             <form class="edit-form" action="/admin/dish/update" method="post" enctype="multipart/form-data">
+                                <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
                                 <input type="hidden" name="id" th:value="${dish.id}">
                                 <div class="form-grid">
                                     <div class="field">
@@ -141,6 +158,17 @@
                                     <div class="field">
                                         <label>价格</label>
                                         <input type="number" name="price" step="0.1" min="0" th:value="${dish.price}">
+                                    </div>
+                                    <div class="field">
+                                        <label>健康建议</label>
+                                        <div class="tip-row">
+                                            <input type="text" name="healthTip" maxlength="200"
+                                                   placeholder="如：蛋白质充足，搭配青菜更均衡"
+                                                   th:value="${dish.healthTip}">
+                                            <button type="button" class="btn btn-sm btn-ghost"
+                                                    th:attr="data-dish-id=${dish.id}"
+                                                    onclick="aiHealthTip(this)">AI 生成</button>
+                                        </div>
                                     </div>
                                     <div class="field">
                                         <label>换图（不选则保留原图）</label>
@@ -159,6 +187,7 @@
                         <!-- 删除 -->
                         <form class="delete-form" action="/admin/dish/delete" method="post"
                               onsubmit="return confirm('确定删除这道菜及其所有评价吗？此操作不可恢复！');">
+                            <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
                             <input type="hidden" name="id" th:value="${dish.id}">
                             <button type="submit" class="btn btn-sm btn-danger">删除</button>
                         </form>
@@ -175,6 +204,92 @@
     </div>
 
 </main>
+
+<script>
+    // 服务端渲染在 <meta name="_csrf"> 里的 token，POST 请求必须带上，否则会被 CSRF 拦截
+    function csrfToken() {
+        var meta = document.querySelector('meta[name="_csrf"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    // 单道：生成后只填进输入框，管理员确认/修改后再点保存，AI 不直接改生产数据
+    function aiHealthTip(btn) {
+        var form = btn.closest('form');
+        var input = form.querySelector('input[name="healthTip"]');
+        var id = btn.getAttribute('data-dish-id');
+        var oldText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '生成中…';
+        fetch('/admin/dish/health-tip?id=' + encodeURIComponent(id), {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken() }
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.tip) {
+                    input.value = data.tip;
+                } else {
+                    alert(data.error || '生成失败，稍后再试');
+                }
+            })
+            .catch(function () { alert('网络开小差了，稍后再试'); })
+            .finally(function () {
+                btn.disabled = false;
+                btn.textContent = oldText;
+            });
+    }
+
+    // 批量：每批 3 道，前端循环调用，直到后端回报 remaining = 0
+    (function () {
+        var btn = document.getElementById('aiBatchBtn');
+        var tip = document.getElementById('aiBatchTip');
+        if (!btn) return;
+
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            var generated = 0;
+            var failed = 0;
+
+            function step() {
+                tip.textContent = '正在生成… 已完成 ' + generated + ' 道';
+                fetch('/admin/dish/health-tip/batch?size=3', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken() }
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.error) {
+                            tip.textContent = data.error;
+                            btn.disabled = false;
+                            return;
+                        }
+                        generated += data.done || 0;
+                        failed += data.failed || 0;
+                        var handled = (data.done || 0) + (data.failed || 0);
+
+                        // 还有剩余且本批确实处理了东西，继续下一批；否则停下避免死循环
+                        if (data.remaining > 0 && handled > 0) {
+                            setTimeout(step, 300);
+                            return;
+                        }
+                        tip.textContent = '完成：生成 ' + generated + ' 道'
+                            + (failed ? '，失败 ' + failed + ' 道' : '')
+                            + '，剩余 ' + data.remaining + ' 道';
+                        btn.disabled = false;
+                        if (generated > 0) {
+                            setTimeout(function () { location.reload(); }, 800);
+                        }
+                    })
+                    .catch(function () {
+                        tip.textContent = '请求失败，稍后再试';
+                        btn.disabled = false;
+                    });
+            }
+
+            step();
+        });
+    })();
+</script>
 
 </body>
 </html>

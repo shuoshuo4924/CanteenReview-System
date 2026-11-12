@@ -1,15 +1,28 @@
 package org.example.canteenreview.service;
 
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
+import com.google.zxing.LuminanceSource;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.EnumMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -24,6 +37,9 @@ public class FileStorageService {
 
     // 允许上传的图片扩展名白名单（统一按小写比较）
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
+
+    // 二维码扫描前先把图缩到这个尺寸以内：整张 10MB 大图直接解码太吃内存
+    private static final int QR_SCAN_MAX_SIDE = 1000;
 
     // 图片保存目录（从配置读取，避免在多处硬编码路径）
     @Value("${app.image-dir}")
@@ -51,6 +67,11 @@ public class FileStorageService {
         if (!hasImageSignature(imageFile, extension)) {
             log.warn("拒绝上传：文件内容与扩展名 {} 不符，可能被改过名：{}",
                     extension, imageFile.getOriginalFilename());
+            return null;
+        }
+        // 二维码检测：晒图里夹带收款码、加群码是最常见的绕过文本过滤的手段
+        if (containsQrCode(imageFile)) {
+            log.warn("拒绝上传：图片中检测到二维码，可能用于导流：{}", imageFile.getOriginalFilename());
             return null;
         }
         try {
@@ -144,6 +165,58 @@ public class FileStorageService {
             log.warn("读取上传文件头失败", e);
             return false;
         }
+    }
+
+    /**
+     * 图片里是否含二维码。
+     *
+     * <p>只做"能不能解出一个码"的判断，不解码内容：对审核来说，
+     * 晒图里出现二维码本身就不合理，没必要关心它指向哪里。
+     *
+     * <p>两种"检测不出来"的情况按无二维码处理，宁可放过也不误杀：
+     * ImageIO 不支持该格式（如未装插件的 webp）、解码过程抛异常。
+     */
+    private boolean containsQrCode(MultipartFile file) {
+        try (InputStream in = file.getInputStream()) {
+            BufferedImage image = ImageIO.read(in);
+            if (image == null) {
+                return false;
+            }
+            LuminanceSource source = new BufferedImageLuminanceSource(shrinkIfNeeded(image));
+            BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+            Map<DecodeHintType, Object> hints = new EnumMap<>(DecodeHintType.class);
+            // TRY_HARDER：光线差、拍摄歪斜的码也能多试几次再下结论
+            hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+            new MultiFormatReader().decode(bitmap, hints);
+            return true;
+        } catch (NotFoundException e) {
+            return false; // 绝大多数正常照片都会走到这里
+        } catch (Exception e) {
+            log.warn("二维码检测失败，按不含二维码处理：{}", file.getOriginalFilename(), e);
+            return false;
+        }
+    }
+
+    /** 图太大就先等比缩小，二维码在 1000px 内仍然识别得出来 */
+    private static BufferedImage shrinkIfNeeded(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        int longest = Math.max(width, height);
+        if (longest <= QR_SCAN_MAX_SIDE) {
+            return image;
+        }
+        double ratio = QR_SCAN_MAX_SIDE / (double) longest;
+        int newWidth = Math.max(1, (int) (width * ratio));
+        int newHeight = Math.max(1, (int) (height * ratio));
+        BufferedImage scaled = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = scaled.createGraphics();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.drawImage(image, 0, 0, newWidth, newHeight, null);
+        } finally {
+            g.dispose();
+        }
+        return scaled;
     }
 
     /**

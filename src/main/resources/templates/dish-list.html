@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 页面里的 fetch 提交要带这个 token，服务端 CsrfInterceptor 会校验 -->
+    <meta name="_csrf" th:content="${session.csrfToken}">
     <title>吃啥饭 · 校园食堂评价</title>
 
     <!-- 设计系统：令牌、排版与通用组件 -->
@@ -31,6 +33,7 @@
                 <a th:if="${session.loginUser.role == 'ADMIN'}" href="/admin/dishes" class="btn btn-primary">管理</a>
                 <!-- 退出必须是 POST：GET 退出能被一张 <img src="/logout"> 跨站触发 -->
                 <form action="/logout" method="post" class="inline-form">
+                    <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
                     <button type="submit" class="btn btn-ghost">退出</button>
                 </form>
             </th:block>

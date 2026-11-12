@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${session.csrfToken}">
     <title>找回密码 · 吃啥饭</title>
 
     <!-- 设计系统：令牌、排版与通用组件 -->
@@ -30,6 +31,7 @@
 
     <!-- ============ 第一步：输入用户名 ============ -->
     <form th:if="${question == null}" action="/forgot" method="post" class="auth-form">
+        <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
         <div class="field">
             <label>用户名</label>
             <input type="text" name="username" placeholder="请输入注册时的用户名" required autocomplete="username"
@@ -41,6 +43,7 @@
 
     <!-- ============ 第二步：密保答案 + 新密码 ============ -->
     <form th:if="${question != null}" action="/forgot/reset" method="post" class="auth-form">
+        <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
         <input type="hidden" name="username" th:value="${username}">
 
         <div class="question-box">

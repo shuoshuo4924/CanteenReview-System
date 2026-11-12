@@ -48,6 +48,9 @@ public class AiServiceImpl implements AiService {
     private static final int MAX_SUGGESTIONS_FOR_AI = 20;
     private static final int MAX_SUGGESTION_TEXT = 100;
 
+    // health_tip 列长度，模型偶尔会写超，截断后再入库
+    private static final int MAX_HEALTH_TIP_LENGTH = 200;
+
     @Value("${deepseek.api-key:}")
     private String apiKey;
 
@@ -122,6 +125,57 @@ public class AiServiceImpl implements AiService {
         messages.add(Map.of("role", "system", "content", buildSuggestionPrompt(suggestions)));
         messages.addAll(safeHistory);
         return send(messages, 400);
+    }
+
+    @Override
+    public String generateHealthTip(Dish dish, List<Review> reviews) {
+        if (dish == null || dish.getName() == null || dish.getName().isBlank()) {
+            return null;
+        }
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("你是一名校园食堂营养师。请针对下面这道菜，写一条给大学生看的健康建议。\n");
+        prompt.append("菜名：").append(dish.getName()).append('\n');
+        if (dish.getCanteen() != null && !dish.getCanteen().isBlank()) {
+            prompt.append("食堂：").append(dish.getCanteen()).append('\n');
+        }
+        if (dish.getPrice() != null) {
+            prompt.append("价格：").append(dish.getPrice()).append(" 元\n");
+        }
+        String reviewsText = buildReviewText(reviews);
+        if (!reviewsText.isBlank()) {
+            prompt.append("同学评价（只用来判断口味和分量，不要复述）：\n").append(reviewsText);
+        }
+        prompt.append("""
+                要求：
+                1. 只从营养角度写：蛋白质、脂肪、油盐、热量、蔬菜和主食的搭配
+                2. 长度 20~40 个汉字，一句话，不要换行
+                3. 直接输出建议正文，不要加「建议」「健康提示」等前缀，不要加引号
+                4. 禁止出现运动、喝水、吃水果、早睡、节食这类与这道菜无关的泛泛内容
+                5. 不要编造菜名以外的信息
+                """);
+
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "user", "content", prompt.toString()));
+        String raw = send(messages, 80);
+
+        // send() 在失败时返回固定话术，这些不能被当成建议存进库
+        if (raw == null || raw.startsWith("AI 还没配置") || raw.startsWith("AI 老师傅")
+                || raw.startsWith("暂时无法生成")) {
+            return null;
+        }
+        return cleanHealthTip(raw);
+    }
+
+    /** 清洗模型输出：去引号/前缀/换行，超长截断到列宽 */
+    private String cleanHealthTip(String raw) {
+        String tip = raw.trim().replaceAll("[\\r\\n]+", " ");
+        tip = tip.replaceAll("^[\"'「『《]+|[\"'」』》]+$", "").trim();
+        tip = tip.replaceAll("^(健康提示|健康建议|建议)\\s*[:：]?", "").trim();
+        if (tip.length() > MAX_HEALTH_TIP_LENGTH) {
+            tip = tip.substring(0, MAX_HEALTH_TIP_LENGTH);
+        }
+        return tip.isBlank() ? null : tip;
     }
 
     /**

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 页面里的 fetch 提交要带这个 token，服务端 CsrfInterceptor 会校验 -->
+    <meta name="_csrf" th:content="${session.csrfToken}">
     <title th:text="${dish.name + ' · 吃啥饭'}">菜品详情</title>
 
     <!-- 设计系统：令牌、排版与通用组件 -->
@@ -54,6 +56,83 @@
             </div>
         </div>
     </div>
+
+    <!-- 健康建议：AI 生成后存库，为空时整块不渲染 -->
+    <section class="health-tip" th:if="${!#strings.isEmpty(dish.healthTip)}">
+        <!-- 徽章大小的医生图标：viewBox 已收紧到图形边界，抹掉两侧空白 -->
+        <span class="ht-icon" aria-hidden="true">
+            <svg viewBox="17 9 38 92" preserveAspectRatio="xMinYMid meet"
+                 xmlns="http://www.w3.org/2000/svg" role="presentation">
+                <!-- 腿与鞋 -->
+                <rect x="28" y="83" width="7" height="11" rx="3.5" fill="#5F6B75"/>
+                <rect x="37" y="83" width="7" height="11" rx="3.5" fill="#5F6B75"/>
+                <rect x="26" y="91.5" width="11" height="5.5" rx="2.75" fill="#3E4A52"/>
+                <rect x="35" y="91.5" width="11" height="5.5" rx="2.75" fill="#3E4A52"/>
+
+                <!-- 脖子 -->
+                <rect x="32" y="36" width="8" height="11" rx="3.5" fill="#F0C8AB"/>
+
+                <!-- 白大褂 -->
+                <path d="M26 43.5c-5.2 1.4-8.4 5-8.4 9.2V83a4.6 4.6 0 0 0 4.6 4.6h27.6A4.6 4.6 0 0 0 54.4 83V52.7c0-4.2-3.2-7.8-8.4-9.2z"
+                      fill="#FFFFFF" stroke="#D7E4DC" stroke-width="1.5"/>
+
+                <!-- 内搭衣领 -->
+                <path d="M31.5 43h9L36 52.5z" fill="#A9D3E4"/>
+
+                <!-- 左臂：自然下垂 -->
+                <path d="M23.5 50.5c-2.6 3-3.9 6.5-3.9 10v10" fill="none"
+                      stroke="#D7E4DC" stroke-width="9.6" stroke-linecap="round"/>
+                <path d="M23.5 50.5c-2.6 3-3.9 6.5-3.9 10v10" fill="none"
+                      stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+
+                <!-- 右臂：弯到胸前拿病历本 -->
+                <path d="M48.5 50.5c2.5 2.9 3.7 6 3.7 9 0 3.4-1.7 6.1-4.7 7.5" fill="none"
+                      stroke="#D7E4DC" stroke-width="9.6" stroke-linecap="round"/>
+                <path d="M48.5 50.5c2.5 2.9 3.7 6 3.7 9 0 3.4-1.7 6.1-4.7 7.5" fill="none"
+                      stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+
+                <!-- 病历本 -->
+                <g transform="rotate(-8 44 70)">
+                    <rect x="36.5" y="61" width="15" height="18" rx="2.2" fill="#6FB0D3"/>
+                    <rect x="39.5" y="65" width="9" height="1.8" rx="0.9" fill="#FFFFFF" opacity="0.9"/>
+                    <rect x="39.5" y="69.5" width="6.5" height="1.8" rx="0.9" fill="#FFFFFF" opacity="0.9"/>
+                    <rect x="39.5" y="74" width="8" height="1.8" rx="0.9" fill="#FFFFFF" opacity="0.9"/>
+                </g>
+
+                <!-- 手 -->
+                <circle cx="46.5" cy="68.5" r="4.2" fill="#F0C8AB"/>
+
+                <!-- 头发 + 脸 -->
+                <circle cx="36" cy="25" r="14.2" fill="#3E4A52"/>
+                <circle cx="36" cy="27" r="12.8" fill="#F8D9C0"/>
+
+                <!-- 腮红 -->
+                <ellipse cx="27.5" cy="32" rx="2.6" ry="1.7" fill="#F4A79E" opacity="0.5"/>
+                <ellipse cx="44.5" cy="32" rx="2.6" ry="1.7" fill="#F4A79E" opacity="0.5"/>
+
+                <!-- 眼镜 -->
+                <circle cx="30.5" cy="28" r="4.6" fill="#FFFFFF" fill-opacity="0.7"
+                        stroke="#3E4A52" stroke-width="1.5"/>
+                <circle cx="41.5" cy="28" r="4.6" fill="#FFFFFF" fill-opacity="0.7"
+                        stroke="#3E4A52" stroke-width="1.5"/>
+                <path d="M35.1 28h1.8M26 27 23.4 25.7M46 27l2.6-1.3" fill="none"
+                      stroke="#3E4A52" stroke-width="1.5" stroke-linecap="round"/>
+
+                <!-- 眼睛 -->
+                <circle cx="30.5" cy="28.5" r="1.5" fill="#3E4A52"/>
+                <circle cx="41.5" cy="28.5" r="1.5" fill="#3E4A52"/>
+
+                <!-- 微笑 -->
+                <path d="M32.8 33.8c1.6 1.9 5.2 1.9 6.8 0" fill="none"
+                      stroke="#3E4A52" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        </span>
+
+        <div class="ht-body">
+            <span class="ht-label">营养师建议:</span>
+            <p class="ht-text" th:text="${dish.healthTip}">蛋白质足，配一份青菜更均衡</p>
+        </div>
+    </section>
 
     <!-- ================= 评价列表 ================= -->
     <div class="card">
@@ -112,9 +191,19 @@
             <h3>写评价</h3>
         </div>
 
-        <!-- 错误提示（重复评价等） -->
+        <!-- 错误提示（重复评价、含违规内容等） -->
         <div class="notice error" th:if="${errorMsg}">
             <span th:text="${errorMsg}">您已经评价过这道菜啦</span>
+        </div>
+
+        <!-- 成功提示（先审后发时会告诉用户"还在审核中"） -->
+        <div class="notice ok" th:if="${okMsg}">
+            <span th:text="${okMsg}">评价已提交</span>
+        </div>
+
+        <!-- 正在被禁言：提前告知，别让用户填完一整条再被拒 -->
+        <div class="notice error" th:if="${reviewBlockedMsg}">
+            <span th:text="${reviewBlockedMsg}">因多次提交不合规内容，稍后再来评价</span>
         </div>
 
         <!-- 未登录 -->
@@ -127,10 +216,16 @@
             <span>你已经评价过这道菜啦，感谢你的反馈。</span>
         </div>
 
-        <!-- 未评价：显示表单 -->
-        <form action="/dish/review" method="post" enctype="multipart/form-data"
-              th:if="${session.loginUser != null and !hasReviewed}">
+        <!-- 提交失败时就地提示：页面不刷新，已填的内容不会丢 -->
+        <div class="notice error" id="formError" hidden>
+            <span id="formErrorText"></span>
+        </div>
+
+        <!-- 未评价且没被禁言：显示表单 -->
+        <form id="reviewForm" action="/dish/review" method="post" enctype="multipart/form-data"
+              th:if="${session.loginUser != null and !hasReviewed and reviewBlockedMsg == null}">
             <div class="form-body">
+                <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
                 <input type="hidden" name="dishId" th:value="${dish.id}">
 
                 <div class="field">
@@ -151,7 +246,7 @@
 
                 <div class="field">
                     <label>评价内容</label>
-                    <textarea name="comment" rows="3" required
+                    <textarea name="comment" rows="3" required maxlength="500"
                               placeholder="说说好不好吃、分量足不足、值不值这个价..."></textarea>
                 </div>
 
@@ -210,6 +305,192 @@
                     aiBtn.textContent = '重试';
                 });
         });
+    }
+
+    // ================= 提交评价（不刷新页面） =================
+    // 表单在页面最底部，整页刷新会把用户弹回顶部、还得重新往下翻，
+    // 所以这里改成 fetch 提交，成功后就地把评论插进列表，滚动位置原地不动
+    var reviewForm = document.getElementById('reviewForm');
+    if (reviewForm) {
+        var submitBtn = reviewForm.querySelector('.btn-submit');
+        var errorBox = document.getElementById('formError');
+        var errorText = document.getElementById('formErrorText');
+
+        // 服务端渲染在 <meta name="_csrf"> 里的 token，POST 请求必须带上，否则会被 CSRF 拦截
+        var csrfToken = function () {
+            var meta = document.querySelector('meta[name="_csrf"]');
+            return meta ? meta.getAttribute('content') : '';
+        };
+
+        var showSubmitError = function (message) {
+            errorText.textContent = message;
+            errorBox.hidden = false;
+        };
+
+        var resetSubmitBtn = function () {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '提交评价';
+        };
+
+        reviewForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            errorBox.hidden = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '提交中...';
+
+            fetch(reviewForm.action, {
+                method: 'POST',
+                body: new FormData(reviewForm),
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrfToken()},
+                credentials: 'same-origin'
+            })
+                .then(function (res) {
+                    var type = res.headers.get('content-type') || '';
+                    if (type.indexOf('application/json') === -1) {
+                        throw new Error('非 JSON 响应');
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    if (!data.success) {
+                        resetSubmitBtn();
+                        showSubmitError(data.message || '提交失败，稍后再试一次吧');
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        }
+                        return;
+                    }
+                    onReviewSubmitted(data);
+                })
+                .catch(function () {
+                    resetSubmitBtn();
+                    showSubmitError('提交状态未知，刷新页面确认一下结果吧');
+                });
+        });
+
+        var onReviewSubmitted = function (data) {
+            var card = reviewForm.parentNode;
+            card.removeChild(reviewForm);
+
+            // 原表单位置换成成功提示，用户视线不用离开当前位置
+            var ok = document.createElement('div');
+            ok.className = 'notice ok';
+            var okText = document.createElement('span');
+            okText.textContent = data.message;
+            ok.appendChild(okText);
+            card.appendChild(ok);
+
+            // 先审后发：内容还没过审，不进列表也不改分数
+            if (data.pending) {
+                return;
+            }
+            insertReview(data.review);
+            updateReviewCount(1);
+            if (data.avgRating !== null && data.avgRating !== undefined) {
+                updateAvgRating(data.avgRating);
+            }
+            var aiButton = document.getElementById('aiBtn');
+            if (aiButton) {
+                // 之前一条评论都没有时按钮是禁用的，现在可以点了
+                aiButton.disabled = false;
+            }
+        };
+
+        // 按服务端渲染的同一套结构拼节点，textContent 赋值避免评论内容被当成 HTML
+        var insertReview = function (review) {
+            var list = document.querySelector('.review-list');
+            if (!list) {
+                return;
+            }
+            var empty = list.querySelector('.empty');
+            if (empty) {
+                list.removeChild(empty);
+            }
+
+            var item = document.createElement('div');
+            item.className = 'review';
+
+            var top = document.createElement('div');
+            top.className = 'review-top';
+
+            var avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = review.author ? review.author.substring(0, 1) : '匿';
+
+            var info = document.createElement('div');
+            var author = document.createElement('div');
+            author.className = 'review-author';
+            author.textContent = review.author || '匿名同学';
+            var time = document.createElement('div');
+            time.className = 'review-time';
+            time.textContent = review.createTime;
+            info.appendChild(author);
+            info.appendChild(time);
+
+            var stars = document.createElement('div');
+            stars.className = 'review-stars';
+            var on = document.createElement('span');
+            on.className = 'on';
+            on.textContent = repeatStar(review.rating);
+            var off = document.createElement('span');
+            off.className = 'off';
+            off.textContent = repeatStar(5 - review.rating);
+            stars.appendChild(on);
+            stars.appendChild(off);
+
+            top.appendChild(avatar);
+            top.appendChild(info);
+            top.appendChild(stars);
+            item.appendChild(top);
+
+            var text = document.createElement('div');
+            text.className = 'review-text';
+            text.textContent = review.comment;
+            item.appendChild(text);
+
+            if (review.imageUrl) {
+                var img = document.createElement('img');
+                img.className = 'review-img';
+                img.alt = '买家秀';
+                img.src = review.imageUrl;
+                item.appendChild(img);
+            }
+
+            // 列表按时间倒序，最新的排最前面
+            list.insertBefore(item, list.firstChild);
+        };
+
+        var repeatStar = function (count) {
+            var s = '';
+            for (var i = 0; i < count; i++) {
+                s += '★';
+            }
+            return s;
+        };
+
+        var updateReviewCount = function (delta) {
+            var count = document.querySelector('.block-head .count');
+            if (!count) {
+                return;
+            }
+            var matched = count.textContent.match(/\d+/);
+            var total = (matched ? parseInt(matched[0], 10) : 0) + delta;
+            count.textContent = '共 ' + total + ' 条';
+        };
+
+        var updateAvgRating = function (avg) {
+            var box = document.querySelector('.dish-head .score-box');
+            if (!box) {
+                return;
+            }
+            var value = Number(avg);
+            if (isNaN(value)) {
+                return;
+            }
+            // 分数由服务端算好，这里只拼固定结构（"暂无评分"的占位也一并替换掉）
+            box.innerHTML = '<div class="score-num">' + value.toFixed(1) + '<small> 分</small></div>'
+                + '<div class="score-label">平均评分</div>';
+        };
     }
 </script>
 

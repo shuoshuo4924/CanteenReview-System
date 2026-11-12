@@ -18,4 +18,6 @@ public class Review {
     private String comment;
     private String author;
     private LocalDateTime createTime;
+    // 0=待审核，1=已通过。先审后发开启时新评价落 0，后台通过后才在前台出现
+    private Integer status;
 }

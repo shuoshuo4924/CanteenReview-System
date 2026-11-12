@@ -20,4 +20,6 @@ public class Dish {
     private String imageUrl;
     @ExcelProperty("价格")
     private Double price;
+    /** 健康建议：管理员在后台手填，为空时详情页不展示（不进 Excel 模板，避免导入时多一列没处填） */
+    private String healthTip;
 }

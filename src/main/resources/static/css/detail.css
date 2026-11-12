@@ -9,6 +9,65 @@
     padding: 44px 24px 72px;
 }
 
+/* ---------- 健康提示（AI 生成的营养建议） ---------- */
+
+/* 内联提示条：浅色圆角底，左侧徽章大小的医生，右侧紧贴文字 */
+.health-tip {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0 0 20px;
+    padding: 8px 12px;
+    background: #F1F7F3;
+    border: 1px solid #DFEAE3;
+    border-radius: var(--r-md);
+}
+
+/* 医生徽章：比正文略高的小图标，图形靠左贴边 */
+.health-tip .ht-icon {
+    flex: 0 0 auto;
+    display: block;
+    width: 28px;
+    height: 38px;
+}
+
+.health-tip .ht-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.health-tip .ht-body {
+    min-width: 0;
+}
+
+.health-tip .ht-label {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--success);
+}
+
+.health-tip .ht-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    word-break: break-word;
+}
+
+@media (max-width: 560px) {
+    .health-tip {
+        gap: 2px;
+        padding: 9px 12px;
+        margin-bottom: 18px;
+    }
+
+    .health-tip .ht-text { font-size: 13.5px; }
+}
+
 /* ---------- 菜品主卡 ---------- */
 
 .dish-hero {

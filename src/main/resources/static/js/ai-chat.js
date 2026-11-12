@@ -18,6 +18,12 @@
     var endpoint = panel.getAttribute('data-endpoint') || '/ai/chat';
     var history = [];   // 对话历史，每次请求带给后端
 
+    // 服务端渲染在 <meta name="_csrf"> 里的 token，POST 请求必须带上，否则会被 CSRF 拦截
+    function csrfToken() {
+        var meta = document.querySelector('meta[name="_csrf"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
     function toBottom() {
         list.scrollTop = list.scrollHeight;
     }
@@ -84,7 +90,7 @@
 
         fetch(endpoint, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
             body: JSON.stringify(history)
         })
             .then(function (res) {

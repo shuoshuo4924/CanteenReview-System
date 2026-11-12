@@ -1,6 +1,7 @@
 package org.example.canteenreview.config;
 
 import org.example.canteenreview.interceptor.AdminInterceptor;
+import org.example.canteenreview.interceptor.CsrfInterceptor;
 import org.example.canteenreview.interceptor.LoginInterceptor;
 import org.example.canteenreview.interceptor.OriginCheckInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private LoginInterceptor loginInterceptor;
 
+    @Autowired
+    private CsrfInterceptor csrfInterceptor;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 意思是：只要浏览器访问 /images/**，就去配置的文件夹里找
@@ -50,6 +54,13 @@ public class WebConfig implements WebMvcConfigurer {
         // 之前配的是 /user/**，但项目里没有任何 /user/** 接口，等于没生效。
         registry.addInterceptor(loginInterceptor)
                 .addPathPatterns("/dish/review");
+
+        // CSRF token：放在最后，未登录的请求先被上面的拦截器挡掉，
+        // 用户不会看到"页面过期"这种与登录无关的提示。
+        // 静态资源和探针不需要 token，排除掉可以少创建一堆没用的 Session。
+        registry.addInterceptor(csrfInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/css/**", "/js/**", "/images/**", "/favicon.ico", "/actuator/**");
     }
 
     private String ensureTrailingSlash(String path) {

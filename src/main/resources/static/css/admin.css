@@ -170,6 +170,73 @@ details[open] summary { background: var(--accent-wash); }
 
 .delete-form { margin-top: 8px; }
 
+/* ---------- 卡片标题行：标题 + 右侧操作 ---------- */
+
+.card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.card-head .card-title { margin-bottom: 0; }
+
+/* ---------- AI 批量生成：挂在列表标题右侧，不额外占一块卡片 ---------- */
+
+.ai-batch {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.ai-batch-tip {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* ---------- 健康建议字段：按钮内嵌在输入框右侧 ---------- */
+
+.tip-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tip-row > input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: 96px;
+}
+
+.tip-row > .btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    height: 28px;
+    padding: 0 10px;
+    transform: translateY(-50%);
+    font-size: 12px;
+    letter-spacing: 0;
+    color: var(--accent);
+    background: var(--accent-wash);
+    border: 1px solid rgba(176, 64, 28, 0.18);
+    border-radius: 4px;
+}
+
+.tip-row > .btn:hover {
+    color: var(--accent-deep);
+    background: #F5E3D9;
+    border-color: rgba(176, 64, 28, 0.32);
+}
+
+.tip-row > .btn:disabled {
+    opacity: 0.65;
+    cursor: default;
+}
+
 /* ---------- 建议箱管理 ---------- */
 
 .sug-type {

@@ -47,6 +47,7 @@ CREATE TABLE dish (
     avg_rating DOUBLE                DEFAULT 0 COMMENT '平均评分（冗余字段，评价后回写）',
     image_url  VARCHAR(255)          DEFAULT NULL COMMENT '菜品图片 URL',
     price      DOUBLE                DEFAULT NULL COMMENT '价格',
+    health_tip VARCHAR(200)          DEFAULT NULL COMMENT '健康建议（管理员手填，可为空）',
     PRIMARY KEY (id),
     -- 业务唯一键：同一食堂下菜名不重复；不同食堂的同名菜是两条合法记录。
     -- price 绝不能进唯一键，调价是常态，否则"改价=新增一道菜"，评价历史会被拆断
@@ -71,11 +72,39 @@ CREATE TABLE reviews (
     comment     VARCHAR(500)          DEFAULT NULL COMMENT '评价内容',
     author      VARCHAR(50)           DEFAULT NULL COMMENT '评价人显示名',
     create_time DATETIME              DEFAULT NULL COMMENT '创建时间',
+    status      TINYINT      NOT NULL DEFAULT 1 COMMENT '0=待审核 1=已通过',
     PRIMARY KEY (id),
     UNIQUE KEY uk_dish_user (dish_id, user_id),
-    KEY idx_dish_id (dish_id)
+    KEY idx_dish_id (dish_id),
+    KEY idx_status (status)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='评价表';
+
+-- 已经建过 reviews 表的库需要手动补这一列（默认 1 保证历史评价不会突然消失）：
+-- ALTER TABLE reviews ADD COLUMN status TINYINT NOT NULL DEFAULT 1 COMMENT '0=待审核 1=已通过' AFTER create_time;
+-- ALTER TABLE reviews ADD KEY idx_status (status);
+
+-- -------------------------------------------------------------
+-- 评价审核日志
+-- 说明：拒绝会把评价物理删除，所以内容必须在这里留一份快照，
+--       否则事后追查"为什么删了"就无从查起。
+-- -------------------------------------------------------------
+CREATE TABLE review_audit_log (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    review_id   BIGINT       NOT NULL COMMENT '被审核的评价 id',
+    dish_id     BIGINT       NOT NULL COMMENT '所属菜品 id',
+    action      VARCHAR(16)  NOT NULL COMMENT 'APPROVE=通过 REJECT=拒绝',
+    operator    VARCHAR(50)           DEFAULT NULL COMMENT '操作的管理员',
+    author      VARCHAR(50)           DEFAULT NULL COMMENT '评价人',
+    rating      INT                   DEFAULT NULL COMMENT '评分快照',
+    comment     VARCHAR(500)          DEFAULT NULL COMMENT '评价内容快照',
+    image_url   VARCHAR(255)          DEFAULT NULL COMMENT '晒图地址快照',
+    create_time DATETIME              DEFAULT NULL COMMENT '操作时间',
+    PRIMARY KEY (id),
+    KEY idx_review_id (review_id),
+    KEY idx_create_time (create_time)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='评价审核日志';
 
 -- -------------------------------------------------------------
 -- 建议箱表

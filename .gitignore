@@ -35,3 +35,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 运行日志（logback-spring.xml 的默认输出目录）###
+logs/
+
+### 真实环境变量文件，只提交 deploy/env.example ###
+deploy/env

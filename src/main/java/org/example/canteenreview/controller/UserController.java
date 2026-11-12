@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.Duration;
+import java.util.Locale;
 
 /**
  * 用户控制器：只负责接请求、调 Service、控制页面跳转
@@ -36,6 +37,10 @@ public class UserController {
     /** 找回密码两个步骤的 IP 限流参数（挡批量枚举用户名 / 批量试答案） */
     private static final int FORGOT_IP_LIMIT = 10;
     private static final Duration FORGOT_IP_WINDOW = Duration.ofMinutes(10);
+
+    /** 同一账号连续密码错误几次就临时锁住（IP 维度挡不住换 IP 的撞库，账号维度才挡得住） */
+    private static final int MAX_LOGIN_FAILS = 5;
+    private static final Duration LOGIN_LOCK = Duration.ofMinutes(10);
 
     // ================== 1. 注册 ==================
 
@@ -115,8 +120,19 @@ public class UserController {
             return "login";
         }
 
+        // 账号维度锁定：攻击者换 IP 就绕过了上面那层，这里按"被尝试的账号"计数。
+        // 不查库、不管账号是否存在都计数，所以"被锁"这件事本身不会暴露用户名是否真实存在。
+        String failKey = loginFailKey(username);
+        if (!rateLimiter.isAllowed(failKey, MAX_LOGIN_FAILS, LOGIN_LOCK)) {
+            long wait = Math.max(rateLimiter.retryAfterSeconds(failKey, LOGIN_LOCK), 1);
+            model.addAttribute("error", "密码错误次数过多，请 " + wait + " 秒后再试");
+            return "login";
+        }
+
         User user = userService.login(username, password);
         if (user != null) {
+            // 登录成功清空失败计数，避免前几次手误把用户连带锁住
+            rateLimiter.reset(failKey);
             // 防止密文进入 Session：存进 Session 前先把密码、密保答案清掉
             user.setPassword(null);
             user.setSecurityAnswer(null);
@@ -126,9 +142,16 @@ public class UserController {
             return "redirect:/dishes";
         }
 
+        // 只有"密码错/用户不存在"才记账；用户名密码为空的表单校验不算
+        rateLimiter.record(failKey);
         // 不区分「用户不存在」和「密码错误」：否则就成了免费的用户名探测器
         model.addAttribute("error", "用户名或密码不正确");
         return "login";
+    }
+
+    /** 账号维度的限流 key：统一小写去空格，避免换个大小写就绕过锁定 */
+    private static String loginFailKey(String username) {
+        return "login:user:" + (username == null ? "" : username.trim().toLowerCase(Locale.ROOT));
     }
 
     // ================== 3. 退出登录 ==================

@@ -1,5 +1,6 @@
 package org.example.canteenreview.service;
 
+import org.example.canteenreview.entity.Dish;
 import org.example.canteenreview.entity.Review;
 import org.example.canteenreview.entity.Suggestion;
 
@@ -20,4 +21,10 @@ public interface AiService {
 
     // 建议箱后台对话：以最近的留言为背景，帮管理员归纳问题或起草回复
     String chatAboutSuggestions(List<Suggestion> suggestions, List<Map<String, String>> history);
+
+    /**
+     * 根据菜品信息 + 评价生成一句健康建议（营养角度、20~40 字）。
+     * AI 不可用或未配置密钥时返回 null，调用方据此跳过而不是把错误文案存进库。
+     */
+    String generateHealthTip(Dish dish, List<Review> reviews);
 }

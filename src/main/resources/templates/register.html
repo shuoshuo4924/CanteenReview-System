@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${session.csrfToken}">
     <title>注册 · 吃啥饭</title>
 
     <!-- 设计系统：令牌、排版与通用组件 -->
@@ -24,6 +25,7 @@
     </div>
 
     <form action="/register" method="post" class="auth-form">
+        <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
         <div class="field">
             <label>用户名</label>
             <input type="text" name="username" placeholder="给自己起个名字" required maxlength="20"

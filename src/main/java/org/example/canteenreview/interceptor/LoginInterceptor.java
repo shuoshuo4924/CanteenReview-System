@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.io.IOException;
+
 /**
  * 登录拦截器：拦截需要登录才能访问的路径。
  *
@@ -29,7 +31,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         HttpSession session = request.getSession(false);
         User loginUser = session == null ? null : (User) session.getAttribute("loginUser");
         if (loginUser == null) {
-            response.sendRedirect(request.getContextPath() + "/login");
+            reject(request, response);
             return false;
         }
 
@@ -37,7 +39,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         if (fresh == null) {
             // 账号已被删除：直接作废会话，别让幽灵用户继续操作
             session.invalidate();
-            response.sendRedirect(request.getContextPath() + "/login");
+            reject(request, response);
             return false;
         }
 
@@ -46,5 +48,25 @@ public class LoginInterceptor implements HandlerInterceptor {
         fresh.setSecurityAnswer(null);
         session.setAttribute("loginUser", fresh);
         return true;
+    }
+
+    /**
+     * 未登录处理。
+     * 页面里的提交是 fetch，如果这里回 302，前端拿到的会是一整页登录 HTML 而解析失败，
+     * 所以 AJAX 请求直接回 JSON，让页面提示"登录失效"并跳转。
+     */
+    private void reject(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        if (isAjax(request)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write(
+                    "{\"success\":false,\"message\":\"❌ 登录状态已失效，请重新登录\",\"redirect\":\"/login\"}");
+            return;
+        }
+        response.sendRedirect(request.getContextPath() + "/login");
+    }
+
+    private static boolean isAjax(HttpServletRequest request) {
+        return "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"));
     }
 }

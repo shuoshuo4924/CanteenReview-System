@@ -41,6 +41,9 @@ public interface UserService {
     // 按用户名查询，不存在返回 null；返回的对象已清空密码和密保答案
     User findByUsername(String username);
 
+    // 按 id 查询，不存在返回 null；同样清空密码和密保答案（后台展示评论违规用户用）
+    User findById(Long id);
+
     // 密保答案正确才重置密码：成功返回 true，用户不存在/未设密保/答案错误返回 false
     boolean resetPassword(String username, String securityAnswer, String newPassword);
 }

@@ -33,4 +33,13 @@ public interface DishService {
     // 后台菜品列表：按销售档位筛选 + 排序
     // level 取值：null/空=全部，"bad"=滞销(0~3分)，"normal"=正常(3~4分)，"good"=畅销(4~5分)
     List<Dish> listDishesForAdmin(String level, String sortBy);
+
+    /** 取还没有健康建议的菜品（按 id 升序，最多 limit 条），供 AI 分批生成 */
+    List<Dish> listDishesWithoutHealthTip(int limit);
+
+    /** 还没有健康建议的菜品数量 */
+    long countDishesWithoutHealthTip();
+
+    /** 只更新健康建议字段（返回 false 表示菜品不存在或建议为空） */
+    boolean updateHealthTip(Long dishId, String healthTip);
 }
