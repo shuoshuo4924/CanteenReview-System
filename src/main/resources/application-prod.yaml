@@ -1,0 +1,45 @@
+# 生产环境配置：通过 SPRING_PROFILES_ACTIVE=prod 激活（见 deploy/env.example）。
+# 只写"和开发环境不一样"的部分，其余继承 application.yaml。
+spring:
+  # 生产必须开模板缓存：关着的话每次请求都要重新解析一遍 HTML
+  thymeleaf:
+    cache: true
+
+  datasource:
+    # 强制 TLS。sslMode=REQUIRED 只加密、不校验证书链，MySQL 8 的自签证书开箱可用；
+    # DBA 有配 CA 的话升级成 sslMode=VERIFY_CA 更严。绝不要再回到 useSSL=false。
+    # allowPublicKeyRetrieval=false 是配合 TLS 的正确取值，明文连接时它才是必需的逃生口。
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DB:canteen_review}?sslMode=REQUIRED&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=false
+    # 专用低权限账号，不要用 root
+    username: ${MYSQL_USER:canteen}
+    password: ${MYSQL_PASSWORD:}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+server:
+  # 和 Nginx 部署在同一台机器时建议只监听回环：
+  # 否则有人可以绕过 Nginx 直连 8080 端口，得到一条明文、无限流、无 HSTS 的入口。
+  # address: 127.0.0.1
+
+  # 前面挂 Nginx 时必须打开，否则 Spring 以为外部是 http：
+  # HSTS 不下发、重定向地址生成 http://、COOKIE_SECURE=true 后甚至直接掉登录态。
+  # 前提是确认 Nginx 会覆盖 X-Forwarded-* 头；服务端口直接暴露公网时保持关闭，
+  # 否则客户端自己带一个伪造的转发头就能骗过服务端。
+  forward-headers-strategy: native
+
+app:
+  # 开发环境的默认值是 Windows 路径 D:/canteen-images/，生产必须换掉。
+  # /var/lib/canteen-review 由 systemd 的 StateDirectory 创建并授权给 canteen 用户。
+  image-dir: ${IMAGE_DIR:/var/lib/canteen-review/images/}
+  log-dir: ${LOG_DIR:/opt/canteen-review/logs}
+
+  # 限流/封禁状态存在哪：
+  #   单实例部署 —— 保持 memory 即可，不需要 Redis；
+  #   多实例部署 —— 必须改成 redis，否则每台机器各记各的，换台机器就能绕过限流和封禁。
+  # 注意：设成 redis 但机器上没有 Redis 时，所有请求都会抛异常，确认装好再打开。
+  # rate-limit:
+  #   store: redis
