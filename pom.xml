@@ -75,6 +75,16 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- 3.0 数据库版本迁移：启动时自动执行 classpath:db/migration 下未应用的脚本 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <!-- Flyway 8 之后 MySQL 支持拆成独立模块，不加这个启动会报 "Unsupported Database: MySQL" -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
         <!-- 3.1 支持 JSQLParser 解析 SQL 语句 -->
         <dependency>
             <groupId>com.baomidou</groupId>

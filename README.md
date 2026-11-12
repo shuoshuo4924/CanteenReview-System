@@ -34,6 +34,7 @@
 |------|------|
 | 框架 | Spring Boot 4.1.2（Java 17 / Tomcat 11 / Jackson 3） |
 | 持久层 | MyBatis-Plus 3.5.18.1 + MySQL 8（mysql-connector-j 26.10.0） |
+| 数据库迁移 | Flyway 12（启动时自动执行 `db/migration` 下的脚本） |
 | 模板引擎 | Thymeleaf |
 | 缓存/状态 | Redis（可选，多实例部署时启用） |
 | 工具库 | Lombok、EasyExcel 4.0.3（POI 5.5.1）、ZXing 3.5.3、pinyin4j、Spring Security Crypto（仅用 BCrypt） |
@@ -59,7 +60,7 @@ src/main/resources/
 ├── static/css|js       # 样式与公共脚本
 ├── application.yaml    # 开发环境配置（数据库、图片目录、AI 密钥等）
 ├── application-prod.yaml # 生产环境覆盖（TLS、模板缓存、目录、反向代理头）
-├── schema.sql          # 建表脚本（需手动执行）
+├── db/migration/       # Flyway 迁移脚本（V1 建表，后续变更追加 V2、V3…）
 ├── sensitive-words.txt # 敏感词库（支持外部路径热更新）
 └── logback-spring.xml  # 日志配置（按天滚动）
 
@@ -70,7 +71,11 @@ deploy/
 
 ## 本地运行
 
-1. **建库建表**：执行 `src/main/resources/schema.sql`。注意脚本里带 `DROP TABLE`，会清空已有数据。
+1. **建空库**：表结构不用手工建，Flyway 会在启动时自动执行 `db/migration/V1__init_schema.sql`。
+   ```sql
+   CREATE DATABASE canteen_review DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+   ```
+   已有的旧库第一次启动同样安全：Flyway 检测到 schema 非空会把基线记在版本 1，不会重复建表。
 2. **数据库连接**：在 `application.yaml` 里改地址和账号，密码通过环境变量 `MYSQL_PASSWORD` 传入。
 3. **图片目录**：修改 `app.image-dir`（默认 `D:/canteen-images/`），需与 `app.image-url-prefix` 对应。
 4. **AI 功能**：设置环境变量 `DEEPSEEK_API_KEY`。没设置也能启动，AI 接口只会返回"还没配置密钥"的提示。
@@ -104,11 +109,12 @@ chmod 600 /etc/canteen-review/env
 
 ```sql
 CREATE USER 'canteen'@'localhost' IDENTIFIED BY '强密码' REQUIRE SSL;
-GRANT SELECT, INSERT, UPDATE, DELETE ON canteen_review.* TO 'canteen'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX ON canteen_review.* TO 'canteen'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-`schema.sql` 不会自动执行（Spring Boot 对 MySQL 默认不跑初始化脚本），建表请手动执行，因此应用账号不需要 DDL 权限。
+`CREATE` / `ALTER` / `INDEX` 是 Flyway 要的：它需要创建 `flyway_schema_history` 记录表，以后每次迁移也要改结构。
+如果不希望应用账号带 DDL 权限，可以另建一个迁移专用账号，通过 `spring.flyway.user` / `spring.flyway.password` 单独指定。
 
 ### 4. systemd
 
@@ -171,5 +177,5 @@ UPDATE `user` SET role = 'ADMIN' WHERE username = '你的用户名';
 - **新增接口默认是公开的**：认证采用拦截器白名单模式，`LoginInterceptor` 只拦 `/dish/review` 和 `/admin/**`，`AdminInterceptor` 只拦 `/admin/**`。新增需要登录或管理员权限的接口时，必须同步在 `WebConfig` 里补上拦截路径，否则忘了配就是对外公开。
 - **多实例必须切 Redis**：`app.rate-limit.store` 默认 `memory`，每台机器各记各的限流和封禁状态，换台机器就能绕过。注意切 `redis` 前先确认 Redis 可用，否则请求会报错。
 - **反代部署**：`app.trust-proxy` 保持 `false`，直连时打开会让客户端伪造 `X-Forwarded-For` 绕过限流；前面挂 Nginx 时应让 Nginx 覆盖该头。
-- **表结构变更需手动同步**，`schema.sql` 不会自动跑。
+- **表结构变更走新脚本**：改表请在 `db/migration/` 下新增 `V2__xxx.sql`、`V3__xxx.sql`，**不要修改已经执行过的脚本**——Flyway 会校验 checksum，改了就启动失败。本地开发如果改坏了想重来，删库重建即可。
 - **图片目录**需要应用用户可写，生产环境由 systemd 的 `StateDirectory` 提供。

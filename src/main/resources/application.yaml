@@ -16,6 +16,16 @@ spring:
     password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  # 数据库版本迁移：启动时把 db/migration 下未执行的脚本按版本号顺序跑一遍。
+  # 已有的库第一次启动会被"基线"在 1，表示 V1 的建表已经手工做过了，不会重复建表报错；
+  # 全新的空库则正常从 V1 开始建表。
+  # 表结构变更一律新增 V2__xxx.sql、V3__xxx.sql，不要改动已执行过的脚本（Flyway 会校验校验和）。
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
+
   # 文件上传大小限制（手机拍照照片通常 2~5MB，默认 1MB 会失败）
   servlet:
     multipart:
