@@ -33,6 +33,9 @@ PrivateTmp=true
 # 系统目录只读，/opt 仍然可写（日志、临时文件）
 ProtectSystem=full
 ProtectHome=true
+# 自动创建 /var/lib/canteen-review 并把属主设成 canteen:canteen，
+# 这是图片目录 IMAGE_DIR=/var/lib/canteen-review/images/ 的父目录，否则应用落盘会 Permission denied
+StateDirectory=canteen-review
 # 禁止访问内核日志、设备、内核调优参数
 ProtectKernelLogs=true
 ProtectKernelTunables=true
