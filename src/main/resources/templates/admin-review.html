@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 页面里的 fetch 提交要带这个 token，服务端 CsrfInterceptor 会校验 -->
+    <meta name="_csrf" th:content="${session.csrfToken}">
+    <title>评论审核 · 吃啥饭后台</title>
+
+    <!-- 设计系统：令牌、排版与通用组件 -->
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <!-- 后台专属：表格、工具栏、筛选栏 -->
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <a href="/admin/dishes" class="brand">吃啥饭 · 后台</a>
+        <nav class="user-area">
+            <a href="/admin/dishes" class="back">菜品管理</a>
+            <a href="/admin/suggestions" class="back">建议管理</a>
+            <a href="/dishes" class="back">返回前台 →</a>
+        </nav>
+    </div>
+</header>
+
+<main class="wrap">
+
+    <div class="page-head">
+        <h1>评论审核</h1>
+        <p>
+            还有 <b th:text="${pendingCount}">0</b> 条待审核；
+            通过后才会出现在菜品详情页，也才开始参与平均分
+        </p>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="notice ok" th:if="${okMsg}" th:text="${okMsg}">操作成功</div>
+    <div class="notice err" th:if="${errMsg}" th:text="${errMsg}">操作失败</div>
+
+    <!-- 审核开关关闭时的说明，避免管理员以为是漏审 -->
+    <div class="notice" th:unless="${auditEnabled}">
+        当前关闭了「先审后发」（app.review-audit=false），新评价直接通过，这里只会看到历史记录
+    </div>
+
+    <!-- 敏感词库：改完 txt 不用重启，定时任务会检测，也可以点按钮立即重载 -->
+    <div class="card">
+        <div class="card-head">
+            <h3 class="card-title">敏感词库</h3>
+            <div class="ai-batch">
+                <span class="ai-batch-tip"
+                      th:text="'当前 ' + ${sensitiveWordCount} + ' 条词 / ' + ${sensitiveWordEntries}
+                               + ' 个匹配串（含拼音），来源：' + ${sensitiveWordSource}">
+                    当前 85 条词 / 170 个匹配串（含拼音），来源：classpath:sensitive-words.txt
+                </span>
+                <form action="/admin/sensitive-words/reload" method="post" class="inline-form">
+                    <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
+                    <button type="submit" class="btn btn-outline btn-sm">重载词库</button>
+                </form>
+            </div>
+        </div>
+        <p class="text-muted">改完词库文件后 60 秒内自动生效；想立刻看到效果就点「重载词库」。</p>
+    </div>
+
+    <!-- 评论违规禁言：阶梯处罚的当前状态，机器误判时在这里手动放人 -->
+    <div class="card">
+        <div class="card-head">
+            <h3 class="card-title">评论违规禁言</h3>
+            <div class="ai-batch">
+                <span class="ai-batch-tip">
+                    用户：前 3 次仅记数，第 4 次起 10 分钟并逐次翻倍（封顶 12 小时）｜
+                    IP：10 次后固定 10 分钟（防换号重刷）
+                </span>
+            </div>
+        </div>
+
+        <div class="table-responsive" th:unless="${#lists.isEmpty(penalties)}">
+            <table>
+                <thead>
+                <tr>
+                    <th>维度</th>
+                    <th>对象</th>
+                    <th>违规次数</th>
+                    <th>最近命中</th>
+                    <th>剩余时间</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${penalties}">
+                    <td th:text="${p.scope}">用户</td>
+                    <td class="font-bold" th:text="${p.subject}">小明</td>
+                    <td class="text-muted" th:text="|${p.count} 次|">4 次</td>
+                    <td class="text-muted" th:text="${p.category}">词库</td>
+                    <td class="text-muted" th:text="${p.remaining}">10 分钟</td>
+                    <td class="col-actions">
+                        <form action="/admin/reviews/penalty/clear" method="post" class="inline-form"
+                              onsubmit="return confirm('确定解除这条禁言吗？对方可以立即继续评论。');">
+                            <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
+                            <input type="hidden" name="key" th:value="${p.key}">
+                            <button type="submit" class="btn btn-sm btn-outline">解除</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(penalties)}">
+            <span class="icon">🔓</span>
+            当前没有处于禁言中的对象
+        </div>
+    </div>
+
+    <div class="card">
+        <!-- 状态筛选：选择即生效 -->
+        <div class="filter-bar">
+            <div class="filter-item">
+                <label>审核状态</label>
+                <form action="/admin/reviews" method="get">
+                    <select name="status" onchange="this.form.submit()">
+                        <option value="" th:selected="${status == null or status == ''}">全部</option>
+                        <option value="PENDING" th:selected="${status == 'PENDING'}">待审核</option>
+                        <option value="APPROVED" th:selected="${status == 'APPROVED'}">已通过</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                <tr>
+                    <th>菜品</th>
+                    <th>评分</th>
+                    <th>内容</th>
+                    <th>提交人</th>
+                    <th>时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${reviews}">
+                    <td class="font-bold" th:text="${dishNames.get(r.dishId)} ?: '菜品已删除'">红烧肉</td>
+
+                    <td class="score" th:text="${r.rating} + ' 星'">5 星</td>
+
+                    <td class="sug-cell">
+                        <p th:text="${r.comment} ?: '（只打了分，没写内容）'">评价内容</p>
+                        <img class="thumb" th:if="${r.imageUrl}" th:src="${r.imageUrl}" alt="晒图">
+                    </td>
+
+                    <td class="text-muted" th:text="${r.author}">小明</td>
+
+                    <td class="text-muted"
+                        th:text="${#temporals.format(r.createTime, 'yyyy-MM-dd HH:mm')}">2026-11-04 12:00</td>
+
+                    <td>
+                        <!-- 1 = 已通过，0 = 待审核（与 ReviewService 里的常量一致） -->
+                        <span th:class="${r.status == 1 ? 'sug-status done' : 'sug-status pending'}"
+                              th:text="${r.status == 1 ? '已通过' : '待审核'}">待审核</span>
+                    </td>
+
+                    <td class="col-actions">
+                        <form th:if="${r.status != 1}" action="/admin/reviews/approve" method="post"
+                              class="inline-form">
+                            <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
+                            <input type="hidden" name="id" th:value="${r.id}">
+                            <input type="hidden" name="status" th:value="${status}">
+                            <button type="submit" class="btn btn-sm btn-primary">通过</button>
+                        </form>
+
+                        <form action="/admin/reviews/reject" method="post"
+                              onsubmit="return confirm('确定拒绝这条评价吗？记录和晒图都会被删除，不可恢复。');">
+                            <input type="hidden" name="_csrf" th:value="${session.csrfToken}">
+                            <input type="hidden" name="id" th:value="${r.id}">
+                            <input type="hidden" name="status" th:value="${status}">
+                            <button type="submit" class="btn btn-sm btn-danger">拒绝</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(reviews)}">
+            <span class="icon">✅</span>
+            这个状态下没有评价
+        </div>
+    </div>
+
+    <!-- ================= 审核记录 ================= -->
+    <!-- 拒绝会把评价物理删除，这里是事后追溯的唯一入口 -->
+    <div class="card">
+        <div class="block-head">
+            <h3>最近审核记录</h3>
+            <span class="count">只显示最近 50 条</span>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>动作</th>
+                    <th>菜品</th>
+                    <th>内容快照</th>
+                    <th>评价人</th>
+                    <th>操作人</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${auditLogs}">
+                    <td class="text-muted"
+                        th:text="${#temporals.format(item.createTime, 'MM-dd HH:mm')}">11-12 10:00</td>
+                    <td>
+                        <span th:class="${item.action == 'APPROVE' ? 'sug-status done' : 'sug-status pending'}"
+                              th:text="${item.action == 'APPROVE' ? '通过' : '拒绝'}">通过</span>
+                    </td>
+                    <td th:text="${dishNames.get(item.dishId)} ?: '菜品已删除'">红烧肉</td>
+                    <td class="sug-cell" th:text="${item.comment} ?: '（无内容）'">评价内容快照</td>
+                    <td class="text-muted" th:text="${item.author}">小明</td>
+                    <td class="text-muted" th:text="${item.operator}">admin</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(auditLogs)}">
+            <span class="icon">🗂</span>
+            还没有审核记录
+        </div>
+    </div>
+
+</main>
+
+</body>
+</html>

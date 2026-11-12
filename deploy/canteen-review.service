@@ -1,0 +1,48 @@
+[Unit]
+Description=CanteenReview 食堂菜品点评系统
+Documentation=https://example.com/canteen-review
+# 数据库可能和本机同机部署，等网络就绪即可；MySQL 服务名各发行版不同（mysql / mysqld），
+# 需要强依赖时自己补一条 After=，不要写死。
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 专用低权限账号：useradd --system --no-create-home --shell /usr/sbin/nologin canteen
+User=canteen
+Group=canteen
+WorkingDirectory=/opt/canteen-review
+
+# 数据库密码、AI Key、Cookie Secure 都从这里注入，文件权限建议 600 且属主为 root
+EnvironmentFile=/etc/canteen-review/env
+
+# -Xmx512m：别让 JVM 按物理内存默认分配，小机器容易被 OOM Killer 干掉
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Shanghai \
+          -jar /opt/canteen-review/canteen-review.jar
+
+# JVM 被 SIGTERM 优雅关闭时退出码是 143，systemd 不该当成失败
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+# ---------- 安全加固 ----------
+# 禁止提权
+NoNewPrivileges=true
+# 私有 /tmp，避免和其他进程互相看到临时文件
+PrivateTmp=true
+# 系统目录只读，/opt 仍然可写（日志、临时文件）
+ProtectSystem=full
+ProtectHome=true
+# 禁止访问内核日志、设备、内核调优参数
+ProtectKernelLogs=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+# 只允许 IPv4/IPv6 + Unix socket
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# 文件句柄：上传图片 + 数据库连接池 + 日志，默认 1024 在高并发下可能不够
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
